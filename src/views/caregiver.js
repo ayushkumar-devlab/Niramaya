@@ -110,12 +110,12 @@ function renderCaregiverDashboard(container) {
       <div class="print-only print-report-header">
         <h1>Niramaya CareCircle Report</h1>
         <p><strong>Patient:</strong> ${escapeHtml(patientName)} | <strong>Period:</strong> ${adherenceData.startDate} to ${adherenceData.endDate}</p>
-        <p><strong>Printed on:</strong> ${new Date().toLocaleString()}</p>
+        <p><strong>${t('caregiver.printedOn')}</strong> ${new Intl.DateTimeFormat(getLocale() === 'hi' ? 'hi-IN' : getLocale() === 'kn' ? 'kn-IN' : 'en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}</p>
         <hr class="mt-2 mb-4" />
       </div>
 
       <!-- Summary Metrics Grid -->
-      <section class="caregiver-metrics-grid mt-4" aria-label="Adherence Summary Metrics">
+      <section class="caregiver-metrics-grid mt-4" aria-label="${t('caregiver.adherenceSummary')}">
         <div class="metric-card card">
           <span class="metric-label">7-Day Adherence</span>
           <div class="metric-value-row">
@@ -164,7 +164,7 @@ function renderCaregiverDashboard(container) {
         </div>
 
         <div class="calendar-table-wrapper mt-4">
-          <table class="calendar-table" aria-label="7-Day medication adherence breakdown">
+          <table class="calendar-table" aria-label="${t('caregiver.adherenceBreakdown')}">
             <thead>
               <tr>
                 <th scope="col">Date</th>
@@ -192,7 +192,7 @@ function renderCaregiverDashboard(container) {
         <div class="section-header-row">
           <h2 id="missed-history-title" class="section-title">${t('caregiver.missedHistory')}</h2>
           <div class="history-filter no-print">
-            <label for="filter-med-select" class="sr-only">Filter by medicine</label>
+            <label for="filter-med-select" class="sr-only">${t('caregiver.relatedMedication')}</label>
             <select id="filter-med-select" class="form-select">
               <option value="">All Medications</option>
               ${medications.map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}
@@ -277,7 +277,7 @@ function renderCalendarRows(calendarGrid) {
                 : slots
                     .map((s) => {
                       const bubbleClass = `slot-bubble bubble-${s.status}`
-                      return `<span class="${bubbleClass}" title="${escapeHtml(s.medicationName)} at ${s.time} (${s.status})">${s.time}</span>`
+                      return `<span class="${bubbleClass}" title="${escapeHtml(t('caregiver.doseAt', { name: s.medicationName, time: s.time, status: s.status }))}">${s.time}</span>`
                     })
                     .join('')
             }
@@ -382,7 +382,7 @@ function renderNotesList(notes, medications) {
   return notes
     .map((note) => {
       const med = medications.find((m) => m.id === note.medicationId)
-      const dateFormatted = new Date(note.createdAt).toLocaleString()
+      const dateFormatted = new Intl.DateTimeFormat(getLocale() === 'hi' ? 'hi-IN' : getLocale() === 'kn' ? 'kn-IN' : 'en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(note.createdAt))
 
       return `
       <article class="note-card card p-4 mb-3" data-note-id="${note.id}">
@@ -422,15 +422,15 @@ function attachNoteEventListeners(container, medications) {
     btn.addEventListener('click', async () => {
       const noteId = btn.dataset.id
       const confirmed = await showModal({
-        title: 'Delete Note?',
-        content: 'Are you sure you want to delete this observation? This action cannot be undone.',
-        confirmText: 'Delete',
-        cancelText: 'Cancel',
+        title: t('caregiver.deleteNoteTitle'),
+        content: t('caregiver.deleteNoteBody'),
+        confirmText: t('common.delete'),
+        cancelText: t('common.cancel'),
         dangerous: true,
       })
       if (confirmed) {
         deleteNote(noteId)
-        showToast('Note deleted', 'info')
+        showToast(t('caregiver.noteDeleted'), 'info')
         renderCaregiverDashboard(container)
       }
     })
@@ -448,20 +448,20 @@ function openNoteModal(noteToEdit = null, medications = [], onSaved) {
   wrapper.innerHTML = `
     <form id="note-form" novalidate>
       <div class="form-group mb-4">
-        <label for="form-note-content" class="form-label">Caregiver Observation *</label>
+        <label for="form-note-content" class="form-label">${t('caregiver.noteContent')} *</label>
         <textarea
           id="form-note-content"
           class="form-textarea"
           rows="4"
           required
-          placeholder="e.g. Complained of mild dizziness after morning tablet. Drank 2 glasses of water."
+          placeholder="${t('caregiver.notePlaceholder')}"
         >${isEdit ? escapeHtml(noteToEdit.content) : ''}</textarea>
       </div>
 
       <div class="form-group mb-4">
-        <label for="form-note-med" class="form-label">Related Medication (Optional)</label>
+        <label for="form-note-med" class="form-label">${t('caregiver.relatedMedication')}</label>
         <select id="form-note-med" class="form-select">
-          <option value="">-- None / General Observation --</option>
+          <option value="">${t('caregiver.noMedication')}</option>
           ${medications
             .map(
               (m) =>
@@ -474,25 +474,25 @@ function openNoteModal(noteToEdit = null, medications = [], onSaved) {
   `
 
   showModal({
-    title: isEdit ? 'Edit Observation' : 'Add Caregiver Observation',
+    title: isEdit ? t('caregiver.noteUpdated') : t('caregiver.noteContent'),
     content: wrapper,
-    confirmText: 'Save Note',
-    cancelText: 'Cancel',
+    confirmText: t('common.save'),
+    cancelText: t('common.cancel'),
     onConfirm: async () => {
       const content = wrapper.querySelector('#form-note-content').value.trim()
       const medId = wrapper.querySelector('#form-note-med').value
 
       if (!content) {
-        showToast('Note content cannot be empty', 'error')
+        showToast(t('caregiver.noteEmpty'), 'error')
         return false
       }
 
       if (isEdit) {
         updateNote(noteToEdit.id, content)
-        showToast('Note updated', 'success')
+        showToast(t('caregiver.noteUpdated'), 'success')
       } else {
         addNote({ content, medicationId: medId || null, author: 'Caregiver' })
-        showToast('Note saved', 'success')
+        showToast(t('caregiver.noteSaved'), 'success')
       }
 
       if (onSaved) onSaved()

@@ -54,7 +54,7 @@ export function renderEmergency(container) {
       </header>
 
       <!-- Primary Emergency Action: Large Accessible Call Button -->
-      <section class="emergency-call-section mt-4 no-print" aria-label="Emergency Call Action">
+      <section class="emergency-call-section mt-4 no-print" aria-label="${t('emergency.callActionLabel')}">
         ${
           hasEmergencyContact
             ? `
@@ -62,11 +62,11 @@ export function renderEmergency(container) {
             id="btn-call-emergency"
             href="${cleanTelHref}"
             class="btn btn-emergency-call"
-            aria-label="Call emergency contact ${escapeHtml(data.emergencyContact.name)} at ${escapeHtml(data.emergencyContact.phone)}"
+            aria-label="${t('emergency.callContactLabel', { name: data.emergencyContact.name, phone: data.emergencyContact.phone })}"
           >
             <span class="call-icon" aria-hidden="true">📞</span>
             <div class="call-text-group">
-              <span class="call-lead-label">Tap to Call Emergency Contact</span>
+              <span class="call-lead-label">${t('emergency.callAction')}</span>
               <span class="call-contact-name">${escapeHtml(data.emergencyContact.name)} (${escapeHtml(data.emergencyContact.relationship || 'Contact')})</span>
               <span class="call-phone-number">${escapeHtml(data.emergencyContact.phone)}</span>
             </div>
@@ -74,10 +74,10 @@ export function renderEmergency(container) {
         `
             : `
           <div class="card warning-contact-missing p-4 text-center">
-            <span class="text-danger font-bold">⚠️ No Emergency Contact Configured</span>
-            <p class="text-secondary text-sm mt-1">Add an emergency contact so paramedics or helpers can reach your family immediately.</p>
+            <span class="text-danger font-bold">⚠️ ${t('emergency.noContact')}</span>
+            <p class="text-secondary text-sm mt-1">${t('emergency.addContactHelp')}</p>
             <button id="btn-quick-add-contact" class="btn btn-primary btn-sm mt-3">
-              + Add Emergency Contact
+              ${t('emergency.addContact')}
             </button>
           </div>
         `
@@ -258,7 +258,7 @@ function openEmergencyEditModal(data, onSaved) {
           type="text"
           class="form-input"
           required
-          placeholder="e.g. Anand Murthy"
+          placeholder="${t('emergency.patientNamePlaceholder')}"
           value="${escapeHtml(data.patientName || '')}"
         />
       </div>
@@ -270,7 +270,7 @@ function openEmergencyEditModal(data, onSaved) {
             id="form-em-age"
             type="number"
             class="form-input"
-            placeholder="e.g. 72"
+            placeholder="${t('emergency.agePlaceholder')}"
             value="${escapeHtml(data.age || '')}"
           />
         </div>
@@ -324,7 +324,7 @@ function openEmergencyEditModal(data, onSaved) {
           id="form-em-allergies-list"
           type="text"
           class="form-input mt-2"
-          placeholder="e.g. Penicillin, Peanuts, Sulfa drugs (comma separated)"
+          placeholder="${t('emergency.allergiesPlaceholder')}"
           value="${escapeHtml(allergiesCsv)}"
           style="${data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES ? '' : 'display:none;'}"
         />
@@ -337,43 +337,43 @@ function openEmergencyEditModal(data, onSaved) {
           id="form-em-conditions"
           type="text"
           class="form-input"
-          placeholder="e.g. Hypertension, Type 2 Diabetes, Glaucoma"
+          placeholder="${t('emergency.conditionsPlaceholder')}"
           value="${escapeHtml(conditionsCsv)}"
         />
       </div>
 
       <hr class="mt-4 mb-4" />
-      <h3 class="font-bold text-navy mb-2">Emergency Contact Information</h3>
+      <h3 class="font-bold text-navy mb-2">${t('emergency.contactTitle')}</h3>
 
       <div class="form-group mb-3">
-        <label for="form-em-contact-name" class="form-label">Contact Full Name</label>
+        <label for="form-em-contact-name" class="form-label">${t('emergency.contactName')}</label>
         <input
           id="form-em-contact-name"
           type="text"
           class="form-input"
-          placeholder="e.g. Priya Murthy (Daughter)"
+          placeholder="${t('emergency.contactNamePlaceholder')}"
           value="${escapeHtml(data.emergencyContact?.name || '')}"
         />
       </div>
 
       <div class="form-row-2 mb-3">
         <div class="form-group">
-          <label for="form-em-contact-phone" class="form-label">Contact Phone Number</label>
+          <label for="form-em-contact-phone" class="form-label">${t('emergency.contactPhone')}</label>
           <input
             id="form-em-contact-phone"
             type="tel"
             class="form-input"
-            placeholder="e.g. +91 98765 43210"
+            placeholder="${t('emergency.contactPhonePlaceholder')}"
             value="${escapeHtml(data.emergencyContact?.phone || '')}"
           />
         </div>
         <div class="form-group">
-          <label for="form-em-contact-rel" class="form-label">Relationship</label>
+          <label for="form-em-contact-rel" class="form-label">${t('emergency.relationship')}</label>
           <input
             id="form-em-contact-rel"
             type="text"
             class="form-input"
-            placeholder="e.g. Daughter, Spouse, Son"
+            placeholder="${t('emergency.relationshipPlaceholder')}"
             value="${escapeHtml(data.emergencyContact?.relationship || '')}"
           />
         </div>
@@ -384,22 +384,22 @@ function openEmergencyEditModal(data, onSaved) {
 
       <div class="form-row-2 mb-3">
         <div class="form-group">
-          <label for="form-em-doctor-name" class="form-label">Doctor's Name</label>
+          <label for="form-em-doctor-name" class="form-label">${t('emergency.doctorName')}</label>
           <input
             id="form-em-doctor-name"
             type="text"
             class="form-input"
-            placeholder="e.g. Dr. K. Rao"
+            placeholder="${t('emergency.doctorNamePlaceholder')}"
             value="${escapeHtml(data.primaryDoctor?.name || '')}"
           />
         </div>
         <div class="form-group">
-          <label for="form-em-doctor-phone" class="form-label">Doctor's Phone</label>
+          <label for="form-em-doctor-phone" class="form-label">${t('emergency.doctorPhone')}</label>
           <input
             id="form-em-doctor-phone"
             type="tel"
             class="form-input"
-            placeholder="e.g. +91 80 2345 6789"
+            placeholder="${t('emergency.doctorPhonePlaceholder')}"
             value="${escapeHtml(data.primaryDoctor?.phone || '')}"
           />
         </div>
@@ -445,13 +445,13 @@ function openEmergencyEditModal(data, onSaved) {
 
       // Validate contact phone if entered
       if (contactPhone && !isValidPhoneNumber(contactPhone)) {
-        showToast('Please enter a valid emergency contact phone number.', 'error')
+        showToast(t('validation.emergencyPhone'), 'error')
         return false
       }
 
       // Validate doctor phone if entered
       if (doctorPhone && !isValidPhoneNumber(doctorPhone)) {
-        showToast("Please enter a valid primary doctor's phone number.", 'error')
+        showToast(t('validation.doctorPhone'), 'error')
         return false
       }
 

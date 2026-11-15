@@ -36,6 +36,10 @@ class SpeechService {
     return Boolean(this.synth)
   }
 
+  hasVoice(lang = 'en') {
+    return Boolean(this._findVoice(lang))
+  }
+
   /**
    * Finds the best voice for the given language code ('en', 'hi', 'kn').
    * @param {string} lang

@@ -1,7 +1,7 @@
 import './style.css'
 import { router } from './modules/router.js'
 import { initStore, getStore } from './modules/store.js'
-import { t, setLocale, getLocale } from './i18n/index.js'
+import { t, setLocale, getLocale, initLocale } from './i18n/index.js'
 
 // ─── View placeholders (dynamic imports with fallback) ───────────────────────
 let renderSenior, renderCaregiver, renderEmergency, renderDoseDecision, renderSafetyChecker, renderSettings
@@ -34,7 +34,7 @@ function buildAppShell() {
       </svg>
       <span class="brand-name">Niramaya</span>
     </div>
-    <nav id="app-desktop-nav" aria-label="Main navigation">
+    <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
       <a href="#/senior" class="nav-link" data-route="senior">${t('nav.senior')}</a>
       <a href="#/dose-decision" class="nav-link" data-route="dose-decision">${t('nav.doseDecision')}</a>
       <a href="#/caregiver" class="nav-link" data-route="caregiver">${t('nav.caregiver')}</a>
@@ -42,7 +42,15 @@ function buildAppShell() {
       <a href="#/safety" class="nav-link" data-route="safety">${t('nav.safety')}</a>
       <a href="#/settings" class="nav-link" data-route="settings">${t('nav.settings')}</a>
     </nav>
-    <button id="senior-mode-toggle" class="btn-ghost senior-toggle" aria-pressed="false" aria-label="Toggle Senior Mode">
+    <label class="language-selector">
+      <span class="sr-only">${t('settings.language')}</span>
+      <select id="language-selector" aria-label="${t('settings.language')}">
+        <option value="en" lang="en">English</option>
+        <option value="hi" lang="hi">हिन्दी</option>
+        <option value="kn" lang="kn">ಕನ್ನಡ</option>
+      </select>
+    </label>
+    <button id="senior-mode-toggle" class="btn-ghost senior-toggle" aria-pressed="false" aria-label="${t('a11y.toggleSeniorMode')}">
       <span class="toggle-icon">👴</span>
     </button>
   </div>
@@ -52,28 +60,29 @@ function buildAppShell() {
   <!-- Views render here -->
 </main>
 
-<nav id="app-nav" aria-label="Bottom navigation" role="navigation">
-  <a href="#/senior" class="tab-item" data-route="senior" aria-label="Senior Mode">
+<nav id="app-nav" aria-label="${t('a11y.bottomNavigation')}" role="navigation">
+  <a href="#/senior" class="tab-item" data-route="senior" aria-label="${t('nav.senior')}">
     <span class="tab-icon">💊</span><span class="tab-label">${t('nav.senior')}</span>
   </a>
-  <a href="#/dose-decision" class="tab-item" data-route="dose-decision" aria-label="Missed Dose">
+  <a href="#/dose-decision" class="tab-item" data-route="dose-decision" aria-label="${t('nav.doseDecision')}">
     <span class="tab-icon">❓</span><span class="tab-label">${t('nav.doseDecision')}</span>
   </a>
-  <a href="#/caregiver" class="tab-item" data-route="caregiver" aria-label="Caregiver">
+  <a href="#/caregiver" class="tab-item" data-route="caregiver" aria-label="${t('nav.caregiver')}">
     <span class="tab-icon">🩺</span><span class="tab-label">${t('nav.caregiver')}</span>
   </a>
-  <a href="#/emergency" class="tab-item" data-route="emergency" aria-label="Emergency">
+  <a href="#/emergency" class="tab-item" data-route="emergency" aria-label="${t('nav.emergency')}">
     <span class="tab-icon">🚨</span><span class="tab-label">${t('nav.emergency')}</span>
   </a>
-  <a href="#/safety" class="tab-item" data-route="safety" aria-label="Safety Checker">
+  <a href="#/safety" class="tab-item" data-route="safety" aria-label="${t('nav.safety')}">
     <span class="tab-icon">🛡️</span><span class="tab-label">${t('nav.safety')}</span>
   </a>
-  <a href="#/settings" class="tab-item" data-route="settings" aria-label="Settings">
+  <a href="#/settings" class="tab-item" data-route="settings" aria-label="${t('nav.settings')}">
     <span class="tab-icon">⚙️</span><span class="tab-label">${t('nav.settings')}</span>
   </a>
 </nav>
 
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+<div id="locale-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <div id="modal-container"></div>
 `
 }
@@ -91,6 +100,9 @@ function applyLocale() {
   const locale = getLocale()
   document.documentElement.setAttribute('lang', locale)
   document.documentElement.setAttribute('data-lang', locale)
+  document.title = `${t('app.name')} — ${t('app.tagline')}`
+  const description = document.querySelector('meta[name="description"]')
+  if (description) description.setAttribute('content', `${t('app.name')} — ${t('app.tagline')}`)
 
   // Update desktop nav text
   document.querySelectorAll('#app-desktop-nav .nav-link[data-route]').forEach(el => {
@@ -102,6 +114,13 @@ function applyLocale() {
     const route = el.closest('[data-route]')?.dataset.route
     if (route) el.textContent = t(`nav.${route}`)
   })
+  const selector = document.getElementById('language-selector')
+  if (selector) {
+    selector.value = getLocale()
+    selector.setAttribute('aria-label', t('settings.language'))
+  }
+  const seniorToggle = document.getElementById('senior-mode-toggle')
+  if (seniorToggle) seniorToggle.setAttribute('aria-label', t('a11y.toggleSeniorMode'))
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -131,6 +150,7 @@ function applySettings() {
 async function init() {
   // 1. Bootstrap store
   initStore()
+  initLocale()
 
   // 2. Apply settings to <html> before paint
   applySettings()
@@ -168,6 +188,12 @@ async function init() {
         html.setAttribute('data-senior', 'true')
         toggleBtn.setAttribute('aria-pressed', 'true')
       }
+
+      const languageSelector = document.getElementById('language-selector')
+      if (languageSelector) {
+        languageSelector.value = getLocale()
+        languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
+      }
       // Persist to store if available
       try {
         const store = getStore()
@@ -189,6 +215,7 @@ async function init() {
   window.addEventListener('localechange', () => {
     applySettings()
     applyLocale()
+    router.rerender()
   })
 
   // 11. Hash change → update nav active state

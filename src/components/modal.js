@@ -87,7 +87,7 @@ export function showModal({
     header.className = 'modal-header'
     header.innerHTML = `
       <h2 class="modal-title" id="modal-title">${escapeHtml(title ?? '')}</h2>
-      <button class="modal-close-btn" aria-label="Close dialog" type="button">&#x2715;</button>
+      <button class="modal-close-btn" aria-label="${t('a11y.closeDialog')}" type="button">&#x2715;</button>
     `
 
     /* Body */
@@ -230,3 +230,5 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+import { t } from '../i18n/index.js'
+

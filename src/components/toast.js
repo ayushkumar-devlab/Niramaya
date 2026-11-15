@@ -28,7 +28,7 @@ function getContainer() {
     container = document.createElement('div')
     container.id = 'toast-container'
     container.setAttribute('role', 'region')
-    container.setAttribute('aria-label', 'Notifications')
+    container.setAttribute('aria-label', t('a11y.notifications'))
     container.setAttribute('aria-live', 'polite')
     container.setAttribute('aria-atomic', 'false')
     document.body.appendChild(container)
@@ -59,7 +59,7 @@ export function showToast(message, type = 'info', duration = 3000) {
       <div class="toast-title">${TITLES[type] ?? 'Notice'}</div>
       <div class="toast-message">${escapeHtml(message)}</div>
     </div>
-    <button class="toast-close" aria-label="Dismiss notification" type="button">&#x2715;</button>
+    <button class="toast-close" aria-label="${t('a11y.dismissNotification')}" type="button">&#x2715;</button>
   `
 
   container.appendChild(toast)
@@ -94,3 +94,5 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+import { t } from '../i18n/index.js'
+

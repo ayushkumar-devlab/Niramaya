@@ -39,6 +39,10 @@ export class Router {
     return this.currentRoute
   }
 
+  rerender() {
+    if (this.currentRoute) this._render(this.currentRoute.path, this.currentRoute.params)
+  }
+
   /**
    * Initialise the router: attach hashchange listener and handle the
    * current hash (or default to #/senior).

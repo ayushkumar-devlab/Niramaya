@@ -23,12 +23,11 @@ import { showToast } from '../components/toast.js'
  */
 function formatTime12h(timeStr) {
   if (!timeStr) return ''
-  const [hStr, mStr] = timeStr.split(':')
-  let hours = parseInt(hStr, 10)
-  const minutes = mStr || '00'
-  const ampm = hours >= 12 ? 'PM' : 'AM'
-  hours = hours % 12 || 12
-  return `${hours}:${minutes} ${ampm}`
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const date = new Date()
+  date.setHours(hours, minutes, 0, 0)
+  const locale = getLocale() === 'hi' ? 'hi-IN' : getLocale() === 'kn' ? 'kn-IN' : 'en-IN'
+  return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date)
 }
 
 /**
@@ -302,7 +301,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   if (medication.activeIngredient) {
     const aiEl = document.createElement('p')
     aiEl.className = 'dose-active-ingredient'
-    aiEl.innerHTML = `<span class="ai-label">Active:</span> `
+    aiEl.innerHTML = `<span class="ai-label">${t('senior.active')}</span> `
     const aiText = document.createElement('span')
     aiText.textContent = medication.activeIngredient
     aiEl.appendChild(aiText)
@@ -324,7 +323,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   if (medication.clinicianInstructions) {
     const clinEl = document.createElement('p')
     clinEl.className = 'dose-clinician-notes'
-    clinEl.innerHTML = `<span aria-hidden="true">🩺</span> <strong>Clinician:</strong> `
+    clinEl.innerHTML = `<span aria-hidden="true">🩺</span> <strong>${t('senior.clinician')}</strong> `
     const clinText = document.createElement('span')
     clinText.textContent = medication.clinicianInstructions
     clinEl.appendChild(clinText)
@@ -344,7 +343,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   btnSpeak.setAttribute('aria-label', `${t('senior.readAloud')} ${medication.name}`)
   btnSpeak.innerHTML = `<span aria-hidden="true">🔊</span> <span class="sr-only">${t('senior.readAloud')}</span>`
   btnSpeak.addEventListener('click', () => {
-    const speechText = `Take ${medication.name}, ${medication.dosage || medication.dose || ''}, at ${formatTime12h(scheduledTime)}.`
+    const speechText = `${t('senior.scheduledFor')} ${medication.name}, ${medication.dosage || medication.dose || ''}, ${formatTime12h(scheduledTime)}.`
     speechService.speak(speechText, getLocale())
   })
   footerRow.appendChild(btnSpeak)
@@ -376,8 +375,9 @@ function createDoseCard(item, index, refreshSchedule, announce) {
     })
     if (confirmed) {
       deleteMedication(medication.id)
-      announce(`${medication.name} deleted`)
-      showToast(`${medication.name} deleted`, 'info')
+      const deletedMessage = t('senior.deletedToast', { name: medication.name })
+      announce(deletedMessage)
+      showToast(deletedMessage, 'info')
       refreshSchedule()
     }
   })
@@ -474,7 +474,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
  * Text-to-Speech logic for reading the entire schedule aloud
  */
 function readAloudSchedule(buttonEl) {
-  if (!speechService.isAvailable()) {
+  if (!speechService.isAvailable() || !speechService.hasVoice(getLocale())) {
     showToast(t('senior.speechUnavailable'), 'warning')
     return
   }
@@ -491,11 +491,11 @@ function readAloudSchedule(buttonEl) {
     return
   }
 
-  const lines = [`Today's medication schedule:`]
+  const lines = [t('senior.scheduleSpeech')]
   for (const item of schedule) {
     const timeFormatted = formatTime12h(item.scheduledTime)
-    const statusText = item.status === 'taken' ? 'already taken' : 'not yet taken'
-    lines.push(`${item.medication.name}, ${item.medication.dosage || item.medication.dose}, scheduled for ${timeFormatted}. Status: ${statusText}.`)
+    const statusText = item.status === 'taken' ? t('senior.takenSpeech') : t('senior.notTakenSpeech')
+    lines.push(`${item.medication.name}, ${item.medication.dosage || item.medication.dose}, ${t('senior.scheduledFor')} ${timeFormatted}. ${t('senior.status')}: ${statusText}.`)
   }
 
   const fullText = lines.join(' ')
@@ -670,7 +670,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
       const removeBtn = document.createElement('button')
       removeBtn.type = 'button'
       removeBtn.className = 'btn btn-ghost btn-remove-time'
-      removeBtn.setAttribute('aria-label', `Remove time ${idx + 1}`)
+      removeBtn.setAttribute('aria-label', t('a11y.removeTime', { count: idx + 1 }))
       removeBtn.innerHTML = '✖'
       removeBtn.disabled = currentTimes.length <= 1
       removeBtn.addEventListener('click', () => {
@@ -748,7 +748,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
         return false
       }
 
-      showToast(isEdit ? `${payload.name} updated` : `${payload.name} added`, 'success')
+      showToast(t(isEdit ? 'senior.updatedToast' : 'senior.addedToast', { name: payload.name }), 'success')
       if (onSaved) onSaved()
       return true
     },

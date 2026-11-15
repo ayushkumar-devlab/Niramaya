@@ -17,12 +17,11 @@ export function renderDoseDecision(container) {
   // Format 12h display
   function formatTime12h(timeStr) {
     if (!timeStr) return ''
-    const [hStr, mStr] = timeStr.split(':')
-    let hours = parseInt(hStr, 10)
-    const minutes = mStr || '00'
-    const ampm = hours >= 12 ? 'PM' : 'AM'
-    hours = hours % 12 || 12
-    return `${hours}:${minutes} ${ampm}`
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    const date = new Date()
+    date.setHours(hours, minutes, 0, 0)
+    const locale = getLocale() === 'hi' ? 'hi-IN' : getLocale() === 'kn' ? 'kn-IN' : 'en-IN'
+    return new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(date)
   }
 
   // Pre-selected parameters from route or state
@@ -46,13 +45,13 @@ export function renderDoseDecision(container) {
 
       <!-- Context Question Form -->
       <section class="card dose-question-card mt-4" aria-labelledby="form-heading">
-        <h2 id="form-heading" class="dose-section-title">Missed Dose Context</h2>
+        <h2 id="form-heading" class="dose-section-title">${t('dose.contextTitle')}</h2>
         <form id="dose-decision-form" class="mt-4" novalidate>
           <!-- 1. Which medicine was missed? -->
           <div class="form-group mb-4">
             <label for="dd-med-select" class="form-label">${t('dose.selectMed')} *</label>
             <select id="dd-med-select" class="form-select form-input-lg" required>
-              <option value="">-- Choose a medication --</option>
+              <option value="">${t('dose.chooseMedication')}</option>
               ${medications
                 .map(
                   (m) => `
@@ -69,7 +68,7 @@ export function renderDoseDecision(container) {
           <div class="form-group mb-4">
             <label for="dd-scheduled-time" class="form-label">${t('dose.scheduledTime')} *</label>
             <select id="dd-scheduled-time" class="form-select form-input-lg" required>
-              <option value="">-- Choose scheduled time --</option>
+              <option value="">${t('dose.chooseTime')}</option>
             </select>
           </div>
 
@@ -121,7 +120,7 @@ export function renderDoseDecision(container) {
   // Populate time dropdown based on selected medication
   function updateTimeOptions() {
     const medId = medSelect.value
-    timeSelect.innerHTML = '<option value="">-- Choose scheduled time --</option>'
+    timeSelect.innerHTML = `<option value="">${t('dose.chooseTime')}</option>`
     const med = medications.find((m) => m.id === medId)
     if (!med || !Array.isArray(med.times)) return
 
@@ -145,13 +144,13 @@ export function renderDoseDecision(container) {
     const hasRecordedNextDose = container.querySelector('input[name="nextRecorded"]:checked')?.value === 'yes'
 
     if (!medId) {
-      alert('Please select a medication.')
+      alert(t('validation.selectMedication'))
       medSelect.focus()
       return
     }
 
     if (!scheduledTime) {
-      alert('Please select the scheduled time.')
+      alert(t('validation.selectScheduledTime'))
       timeSelect.focus()
       return
     }
@@ -190,17 +189,36 @@ function renderDecisionResult(decision, targetEl) {
 
   let styleClass = 'result-verified'
   let statusBadgeIcon = '✅'
-  let visualHeader = 'Verified Saved Instructions'
+  let visualHeader = t('dose.visualVerified')
 
   if (decision.visualStyle === VISUAL_STYLES.MORE_INFO) {
     styleClass = 'result-more-info'
     statusBadgeIcon = '⚠️'
-    visualHeader = 'More Information Required'
+    visualHeader = t('dose.visualMoreInfo')
   } else if (decision.visualStyle === VISUAL_STYLES.PROFESSIONAL) {
     styleClass = 'result-professional'
     statusBadgeIcon = '🩺'
-    visualHeader = 'Professional Assistance Required'
+    visualHeader = t('dose.visualProfessional')
   }
+
+  const medName = decision.availableInfo?.medicationName || ''
+  const decisionText = {
+    UNKNOWN_MEDICATION: ['unknownTitle', 'unknownExplanation', 'unknownNext'],
+    ALREADY_RECORDED: ['alreadyTitle', 'alreadyExplanation', 'alreadyNext'],
+    CONFLICTING_INSTRUCTIONS: ['conflictTitle', 'conflictExplanation', 'conflictNext'],
+    NO_ADVICE: ['noAdviceTitle', 'noAdviceExplanation', 'noAdviceNext'],
+    PARTIAL_INSTRUCTIONS: ['partialTitle', 'partialExplanation', 'partialNext'],
+    VERIFIED_INSTRUCTIONS: ['verifiedTitle', 'verifiedExplanation', 'verifiedNext'],
+  }[decision.status]
+  const [titleKey, explanationKey, nextKey] = decisionText || []
+  const textParams = {
+    medName,
+    time: decision.availableInfo?.scheduledTime || '',
+    source: decision.instructionSource || t('dose.unspecified'),
+  }
+  const title = titleKey ? t(`decision.${titleKey}`, textParams) : decision.title
+  const explanation = explanationKey ? t(`decision.${explanationKey}`, textParams) : decision.explanation
+  const nextStep = nextKey ? t(`decision.${nextKey}`, textParams) : decision.recommendedNextStep
 
   targetEl.innerHTML = `
     <article class="card dose-result-card ${styleClass}">
@@ -208,24 +226,24 @@ function renderDecisionResult(decision, targetEl) {
         <span class="result-banner-icon" aria-hidden="true">${statusBadgeIcon}</span>
         <div>
           <span class="result-visual-label">${visualHeader}</span>
-          <h2 class="result-title">${escapeHtml(decision.title)}</h2>
+          <h2 class="result-title">${escapeHtml(title)}</h2>
         </div>
       </div>
 
       <div class="result-body mt-4">
         <!-- Explanation -->
-        <p class="result-explanation">${escapeHtml(decision.explanation)}</p>
+        <p class="result-explanation">${escapeHtml(explanation)}</p>
 
         <!-- Exact Saved Clinician Instructions (if verified) -->
         ${
           decision.availableInfo.exactInstructions
             ? `
           <div class="exact-instructions-box mt-4">
-            <h3 class="instructions-box-title">Recorded Clinician Instructions:</h3>
+            <h3 class="instructions-box-title">${t('dose.recordedInstructions')}</h3>
             <blockquote class="instructions-quote">"${escapeHtml(decision.availableInfo.exactInstructions)}"</blockquote>
             <div class="source-attribution mt-2">
-              <p><strong>Source:</strong> ${escapeHtml(decision.instructionSource || 'Unspecified')}</p>
-              <p><strong>Verified on:</strong> ${escapeHtml(decision.verificationDate || 'Date not recorded')}</p>
+              <p><strong>${t('dose.source')}</strong> ${escapeHtml(decision.instructionSource || t('dose.unspecified'))}</p>
+              <p><strong>${t('dose.verifiedOn')}</strong> ${escapeHtml(decision.verificationDate || t('dose.dateNotRecorded'))}</p>
             </div>
           </div>
         `
@@ -237,11 +255,11 @@ function renderDecisionResult(decision, targetEl) {
           decision.availableInfo.recordedNotes
             ? `
           <div class="exact-instructions-box mt-4">
-            <h3 class="instructions-box-title">Recorded Notes Found:</h3>
+            <h3 class="instructions-box-title">${t('dose.recordedNotes')}</h3>
             <blockquote class="instructions-quote">"${escapeHtml(decision.availableInfo.recordedNotes)}"</blockquote>
             <div class="source-attribution mt-2">
-              <p><strong>Source:</strong> ${escapeHtml(decision.instructionSource || 'Not recorded')}</p>
-              <p><strong>Verified on:</strong> ${escapeHtml(decision.verificationDate || 'Not recorded')}</p>
+              <p><strong>${t('dose.source')}</strong> ${escapeHtml(decision.instructionSource || t('dose.notRecorded'))}</p>
+              <p><strong>${t('dose.verifiedOn')}</strong> ${escapeHtml(decision.verificationDate || t('dose.notRecorded'))}</p>
             </div>
           </div>
         `
@@ -253,7 +271,7 @@ function renderDecisionResult(decision, targetEl) {
           decision.missingInfo && decision.missingInfo.length > 0
             ? `
           <div class="missing-info-box mt-4">
-            <h3 class="missing-info-title">Missing Information:</h3>
+            <h3 class="missing-info-title">${t('dose.missingInformation')}</h3>
             <ul class="missing-info-list">
               ${decision.missingInfo.map((m) => `<li>❌ ${escapeHtml(m)}</li>`).join('')}
             </ul>
@@ -264,22 +282,22 @@ function renderDecisionResult(decision, targetEl) {
 
         <!-- Recommended Safe Next Step -->
         <div class="next-step-box mt-4">
-          <h3 class="next-step-title">Recommended Safe Next Step:</h3>
-          <p class="next-step-text">👉 ${escapeHtml(decision.recommendedNextStep)}</p>
+          <h3 class="next-step-title">${t('dose.recommendedNextStep')}</h3>
+          <p class="next-step-text">👉 ${escapeHtml(nextStep)}</p>
         </div>
 
         <!-- Strict Double Dose Warning -->
         <div class="hard-warning-box mt-4" role="alert">
           <span class="warning-icon" aria-hidden="true">🚫</span>
           <div>
-            <strong>Hard Safety Rule:</strong>
-            <p>Never take a double dose to make up for a missed one.</p>
+            <strong>${t('dose.hardSafetyRule')}</strong>
+            <p>${t('dose.neverDoubledose')}</p>
           </div>
         </div>
 
         <!-- Medical Disclaimer -->
         <p class="result-disclaimer mt-4 text-secondary">
-          ℹ️ <em>${escapeHtml(decision.disclaimer)}</em>
+          ℹ️ <em>${escapeHtml(t(decision.status === 'PARTIAL_INSTRUCTIONS' ? 'decision.exactDisclaimer' : decision.status === 'VERIFIED_INSTRUCTIONS' ? 'decision.savedDisclaimer' : 'decision.disclaimer'))}</em>
         </p>
       </div>
     </article>
