@@ -44,12 +44,12 @@ export function renderEmergency(container) {
           <span>${t('emergency.badgeTitle')}</span>
         </div>
         <h1 id="emergency-card-title" class="emergency-patient-name" tabindex="-1">
-          ${escapeHtml(data.patientName || 'Medical Emergency Card')}
+          ${escapeHtml(data.patientName || t('emergency.medicalEmergencyCard'))}
         </h1>
         <div class="emergency-vitals-row mt-2">
-          ${data.age ? `<span class="vital-pill"><strong>Age:</strong> ${escapeHtml(data.age)}</span>` : ''}
-          ${data.bloodType ? `<span class="vital-pill blood-pill"><strong>Blood:</strong> ${escapeHtml(data.bloodType)}</span>` : ''}
-          <span class="vital-pill ${allergyDisplayClass}"><strong>Allergies:</strong> ${escapeHtml(allergyText)}</span>
+          ${data.age ? `<span class="vital-pill"><strong>${t('emergency.age')}</strong> ${escapeHtml(data.age)}</span>` : ''}
+          ${data.bloodType ? `<span class="vital-pill blood-pill"><strong>${t('emergency.bloodLabel')}</strong> ${escapeHtml(data.bloodType)}</span>` : ''}
+          <span class="vital-pill ${allergyDisplayClass}"><strong>${t('emergency.allergiesLabel')}</strong> ${escapeHtml(allergyText)}</span>
         </div>
       </header>
 
@@ -67,7 +67,7 @@ export function renderEmergency(container) {
             <span class="call-icon" aria-hidden="true">📞</span>
             <div class="call-text-group">
               <span class="call-lead-label">${t('emergency.callAction')}</span>
-              <span class="call-contact-name">${escapeHtml(data.emergencyContact.name)} (${escapeHtml(data.emergencyContact.relationship || 'Contact')})</span>
+              <span class="call-contact-name">${escapeHtml(data.emergencyContact.name)} (${escapeHtml(data.emergencyContact.relationship || t('emergency.contactLabel'))})</span>
               <span class="call-phone-number">${escapeHtml(data.emergencyContact.phone)}</span>
             </div>
           </a>
@@ -123,7 +123,7 @@ export function renderEmergency(container) {
             </p>
             ${
               data.allergyStatus === ALLERGY_STATUSES.UNKNOWN
-                ? `<p class="text-secondary text-xs mt-1">⚠️ Note: Allergy status has not been confirmed. Paramedics must exercise caution.</p>`
+                ? `<p class="text-secondary text-xs mt-1">⚠️ ${t('emergency.allergyNote')}</p>`
                 : ''
             }
           </div>
@@ -132,7 +132,7 @@ export function renderEmergency(container) {
         <!-- 3. Current Medications (Auto-synchronized from store) -->
         <section class="card emergency-section-card col-span-full" aria-labelledby="medications-heading">
           <h2 id="medications-heading" class="emergency-section-heading">
-            <span aria-hidden="true">💊</span> Current Prescriptions (${data.currentMedications.length})
+            <span aria-hidden="true">💊</span> ${t('emergency.currentPrescriptions', { count: data.currentMedications.length })}
           </h2>
           <div class="emergency-section-body mt-2">
             ${
@@ -142,10 +142,10 @@ export function renderEmergency(container) {
                   <table class="table-clean emergency-med-table">
                     <thead>
                       <tr>
-                        <th>Medication</th>
-                        <th>Dosage</th>
-                        <th>Times</th>
-                        <th>Instructions</th>
+                        <th>${t('emergency.medicationLabel')}</th>
+                        <th>${t('emergency.dosageLabel')}</th>
+                        <th>${t('emergency.timesLabel')}</th>
+                        <th>${t('emergency.instructionsLabel')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -155,8 +155,8 @@ export function renderEmergency(container) {
                         <tr>
                           <td><strong>${escapeHtml(m.name)}</strong></td>
                           <td><span class="badge badge-due">${escapeHtml(m.dosage)}</span></td>
-                          <td>${m.times && m.times.length > 0 ? m.times.join(', ') : 'Daily'}</td>
-                          <td class="text-secondary text-sm">${escapeHtml(m.instructions || 'Standard dosing')}</td>
+                          <td>${m.times && m.times.length > 0 ? m.times.join(', ') : t('emergency.daily')}</td>
+                          <td class="text-secondary text-sm">${escapeHtml(m.instructions || t('emergency.standardDosing'))}</td>
                         </tr>
                       `
                         )
@@ -165,7 +165,7 @@ export function renderEmergency(container) {
                   </table>
                 </div>
               `
-                : `<p class="text-secondary italic">No active prescriptions currently registered.</p>`
+                : `<p class="text-secondary italic">${t('emergency.noActivePrescriptions')}</p>`
             }
           </div>
         </section>
@@ -180,16 +180,16 @@ export function renderEmergency(container) {
               data.primaryDoctor && (data.primaryDoctor.name || data.primaryDoctor.phone)
                 ? `
                 <div class="doctor-contact-box">
-                  <p><strong>Doctor:</strong> ${escapeHtml(data.primaryDoctor.name || 'Not specified')}</p>
-                  ${data.primaryDoctor.clinic ? `<p><strong>Clinic:</strong> ${escapeHtml(data.primaryDoctor.clinic)}</p>` : ''}
+                  <p><strong>${t('emergency.doctorLabel')}</strong> ${escapeHtml(data.primaryDoctor.name || t('emergency.notSpecified'))}</p>
+                  ${data.primaryDoctor.clinic ? `<p><strong>${t('emergency.clinicLabel')}</strong> ${escapeHtml(data.primaryDoctor.clinic)}</p>` : ''}
                   ${
                     data.primaryDoctor.phone
-                      ? `<p><strong>Phone:</strong> <a href="tel:${data.primaryDoctor.phone.replace(/\s+/g, '')}" class="text-teal font-bold">${escapeHtml(data.primaryDoctor.phone)}</a></p>`
+                      ? `<p><strong>${t('emergency.phoneLabel')}</strong> <a href="tel:${data.primaryDoctor.phone.replace(/\s+/g, '')}" class="text-teal font-bold">${escapeHtml(data.primaryDoctor.phone)}</a></p>`
                       : ''
                   }
                 </div>
               `
-                : `<p class="text-secondary italic">Primary doctor information not yet specified.</p>`
+                : `<p class="text-secondary italic">${t('emergency.doctorNotSpecified')}</p>`
             }
           </div>
         </section>
@@ -200,10 +200,10 @@ export function renderEmergency(container) {
         <div class="privacy-flex">
           <span class="privacy-icon" aria-hidden="true">🛡️</span>
           <div>
-            <h3 class="privacy-title">Offline & Local Device Notice</h3>
+            <h3 class="privacy-title">${t('emergency.privacyTitle')}</h3>
             <p class="privacy-text text-secondary">
-              This card is cached on this device and remains accessible completely offline. All health data is kept strictly inside local browser storage and is never transmitted over the internet.
-              <em>Note: Anyone with physical access to this unlocked device can view this emergency card.</em>
+              ${t('emergency.privacyText')}
+              <em>${t('emergency.privacyCaution')}</em>
             </p>
           </div>
         </div>
@@ -265,7 +265,7 @@ function openEmergencyEditModal(data, onSaved) {
 
       <div class="form-row-2 mb-3">
         <div class="form-group">
-          <label for="form-em-age" class="form-label">Age</label>
+          <label for="form-em-age" class="form-label">${t('emergency.age')}</label>
           <input
             id="form-em-age"
             type="number"
@@ -277,7 +277,7 @@ function openEmergencyEditModal(data, onSaved) {
         <div class="form-group">
           <label for="form-em-blood" class="form-label">${t('emergency.blood')}</label>
           <select id="form-em-blood" class="form-select">
-            <option value="">-- Choose Blood Group --</option>
+            <option value="">-- ${t('emergency.blood')} --</option>
             ${['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown']
               .map(
                 (bg) =>
@@ -299,7 +299,7 @@ function openEmergencyEditModal(data, onSaved) {
               value="${ALLERGY_STATUSES.UNKNOWN}"
               ${data.allergyStatus === ALLERGY_STATUSES.UNKNOWN ? 'checked' : ''}
             />
-            <span>⚠️ Unknown / Not Evaluated</span>
+            <span>⚠️ ${t('emergency.allergyUnknown')}</span>
           </label>
           <label class="radio-label">
             <input
@@ -308,7 +308,7 @@ function openEmergencyEditModal(data, onSaved) {
               value="${ALLERGY_STATUSES.NO_KNOWN}"
               ${data.allergyStatus === ALLERGY_STATUSES.NO_KNOWN ? 'checked' : ''}
             />
-            <span>✅ No Known Allergies</span>
+            <span>✅ ${t('emergency.noKnownAllergies')}</span>
           </label>
           <label class="radio-label">
             <input
@@ -317,7 +317,7 @@ function openEmergencyEditModal(data, onSaved) {
               value="${ALLERGY_STATUSES.HAS_ALLERGIES}"
               ${data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES ? 'checked' : ''}
             />
-            <span>🚨 Has Specific Allergies:</span>
+            <span>🚨 ${t('emergency.hasSpecificAllergies')}</span>
           </label>
         </div>
         <input
@@ -332,7 +332,7 @@ function openEmergencyEditModal(data, onSaved) {
 
       <!-- Medical Conditions -->
       <div class="form-group mb-3">
-        <label for="form-em-conditions" class="form-label">${t('emergency.conditions')} (comma separated)</label>
+        <label for="form-em-conditions" class="form-label">${t('emergency.conditions')} (${t('emergency.commaSeparated')})</label>
         <input
           id="form-em-conditions"
           type="text"

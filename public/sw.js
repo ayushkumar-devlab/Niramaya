@@ -1,9 +1,8 @@
-const CACHE_NAME = 'niramaya-v4'
+const CACHE_NAME = 'niramaya-v5'
 const OFFLINE_URL = '/'
 
 // Assets to pre-cache on install
 const PRECACHE_URLS = [
-  '/',
   '/manifest.json',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg',
@@ -11,7 +10,17 @@ const PRECACHE_URLS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const shellResponse = await fetch(OFFLINE_URL)
+      if (!shellResponse.ok) throw new Error(`Unable to precache app shell: ${shellResponse.status}`)
+      await cache.put(OFFLINE_URL, shellResponse.clone())
+      const shell = await shellResponse.text()
+      const discovered = [...shell.matchAll(/(?:src|href)="([^"]+)"/g)]
+        .map((match) => match[1])
+        .filter((url) => url.startsWith('/') && !url.startsWith('//'))
+      const assets = [...new Set([...PRECACHE_URLS, ...discovered])]
+      await cache.addAll(assets)
+    })
       .then(() => self.skipWaiting())
   )
 })

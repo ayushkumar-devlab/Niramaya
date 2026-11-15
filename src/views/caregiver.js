@@ -89,7 +89,7 @@ function renderCaregiverDashboard(container) {
   const adherenceData = calculateSevenDayAdherence()
   const medications = getAllMedications()
   const profile = getStore(KEYS.PROFILE) ?? {}
-  const patientName = profile.name ? profile.name : 'Family Member'
+  const patientName = profile.name ? profile.name : t('common.familyMember')
 
   container.innerHTML = `
     <div class="view-container caregiver-container" role="region" aria-labelledby="caregiver-title">
@@ -97,7 +97,7 @@ function renderCaregiverDashboard(container) {
       <div class="caregiver-header no-print">
         <div>
           <h1 id="caregiver-title" class="senior-heading" tabindex="-1">${t('caregiver.title')}</h1>
-          <p class="subtitle text-secondary">Monitoring adherence for <strong>${escapeHtml(patientName)}</strong></p>
+          <p class="subtitle text-secondary">${t('caregiver.monitoringFor')} <strong>${escapeHtml(patientName)}</strong></p>
         </div>
         <div class="caregiver-actions">
           <button id="btn-print-report" class="btn btn-secondary btn-print" type="button" aria-label="${t('caregiver.printReport')}">
@@ -108,8 +108,8 @@ function renderCaregiverDashboard(container) {
 
       <!-- Printable Report Header (Only visible when printing) -->
       <div class="print-only print-report-header">
-        <h1>Niramaya CareCircle Report</h1>
-        <p><strong>Patient:</strong> ${escapeHtml(patientName)} | <strong>Period:</strong> ${adherenceData.startDate} to ${adherenceData.endDate}</p>
+        <h1>${t('caregiver.reportTitle')}</h1>
+        <p><strong>${t('caregiver.patient')}</strong> ${escapeHtml(patientName)} | <strong>${t('caregiver.period')}</strong> ${adherenceData.startDate} to ${adherenceData.endDate}</p>
         <p><strong>${t('caregiver.printedOn')}</strong> ${new Intl.DateTimeFormat(getLocale() === 'hi' ? 'hi-IN' : getLocale() === 'kn' ? 'kn-IN' : 'en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date())}</p>
         <hr class="mt-2 mb-4" />
       </div>
@@ -117,36 +117,36 @@ function renderCaregiverDashboard(container) {
       <!-- Summary Metrics Grid -->
       <section class="caregiver-metrics-grid mt-4" aria-label="${t('caregiver.adherenceSummary')}">
         <div class="metric-card card">
-          <span class="metric-label">7-Day Adherence</span>
+          <span class="metric-label">${t('caregiver.adherenceRate')}</span>
           <div class="metric-value-row">
             <span class="metric-number ${adherenceData.adherenceRate >= 80 ? 'text-success' : 'text-warning'}">
               ${adherenceData.adherenceRate}%
             </span>
-            <span class="metric-sub text-secondary">Goal: 85%+</span>
+            <span class="metric-sub text-secondary">${t('caregiver.goal')}</span>
           </div>
         </div>
 
         <div class="metric-card card">
-          <span class="metric-label">Doses Taken</span>
+          <span class="metric-label">${t('caregiver.dosesTaken')}</span>
           <div class="metric-value-row">
             <span class="metric-number text-teal">${adherenceData.dosesTaken}</span>
-            <span class="metric-sub text-secondary">of ${adherenceData.totalEligibleDoses} eligible</span>
+            <span class="metric-sub text-secondary">${t('caregiver.eligible', { count: adherenceData.totalEligibleDoses })}</span>
           </div>
         </div>
 
         <div class="metric-card card">
-          <span class="metric-label">Unrecorded / Missed</span>
+          <span class="metric-label">${t('caregiver.unrecordedMissed')}</span>
           <div class="metric-value-row">
             <span class="metric-number text-danger">${adherenceData.dosesUnrecorded}</span>
-            <span class="metric-sub text-secondary">Requiring review</span>
+            <span class="metric-sub text-secondary">${t('caregiver.requiringReview')}</span>
           </div>
         </div>
 
         <div class="metric-card card">
-          <span class="metric-label">Corrected Doses</span>
+          <span class="metric-label">${t('caregiver.correctedDoses')}</span>
           <div class="metric-value-row">
             <span class="metric-number text-secondary">${adherenceData.dosesCorrected}</span>
-            <span class="metric-sub text-secondary">Accidental undos</span>
+            <span class="metric-sub text-secondary">${t('caregiver.accidentalUndos')}</span>
           </div>
         </div>
       </section>
@@ -156,10 +156,10 @@ function renderCaregiverDashboard(container) {
         <div class="section-header-row">
           <h2 id="calendar-heading" class="section-title">${t('caregiver.sevenDay')}</h2>
           <div class="legend-row text-sm">
-            <span class="legend-item"><span class="legend-dot dot-taken"></span> Taken</span>
-            <span class="legend-item"><span class="legend-dot dot-unrecorded"></span> Unrecorded</span>
-            <span class="legend-item"><span class="legend-dot dot-corrected"></span> Corrected</span>
-            <span class="legend-item"><span class="legend-dot dot-future"></span> Future</span>
+            <span class="legend-item"><span class="legend-dot dot-taken"></span> ${t('caregiver.taken')}</span>
+            <span class="legend-item"><span class="legend-dot dot-unrecorded"></span> ${t('caregiver.unrecorded')}</span>
+            <span class="legend-item"><span class="legend-dot dot-corrected"></span> ${t('caregiver.corrected')}</span>
+            <span class="legend-item"><span class="legend-dot dot-future"></span> ${t('caregiver.future')}</span>
           </div>
         </div>
 
@@ -167,9 +167,9 @@ function renderCaregiverDashboard(container) {
           <table class="calendar-table" aria-label="${t('caregiver.adherenceBreakdown')}">
             <thead>
               <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Scheduled Doses</th>
-                <th scope="col">Status Breakdown</th>
+                <th scope="col">${t('caregiver.date')}</th>
+                <th scope="col">${t('caregiver.scheduledDoses')}</th>
+                <th scope="col">${t('caregiver.statusBreakdown')}</th>
               </tr>
             </thead>
             <tbody id="calendar-body">
@@ -181,7 +181,7 @@ function renderCaregiverDashboard(container) {
 
       <!-- Medication-Wise Adherence Breakdown -->
       <section class="card med-adherence-card mt-6" aria-labelledby="med-adherence-title">
-        <h2 id="med-adherence-title" class="section-title">Medication-Wise Adherence</h2>
+        <h2 id="med-adherence-title" class="section-title">${t('caregiver.medicationWise')}</h2>
         <div class="med-adherence-list mt-4">
           ${renderMedicationAdherenceList(adherenceData.medicationStats)}
         </div>
@@ -194,7 +194,7 @@ function renderCaregiverDashboard(container) {
           <div class="history-filter no-print">
             <label for="filter-med-select" class="sr-only">${t('caregiver.relatedMedication')}</label>
             <select id="filter-med-select" class="form-select">
-              <option value="">All Medications</option>
+              <option value="">${t('caregiver.allMedications')}</option>
               ${medications.map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`).join('')}
             </select>
           </div>
@@ -330,7 +330,7 @@ function renderMedicationAdherenceList(medStats) {
  */
 function renderMissedHistory(records) {
   if (!records || records.length === 0) {
-    return '<p class="text-success p-3">✅ Excellent! No missed or unrecorded doses found in the recent window.</p>'
+    return `<p class="text-success p-3">✅ ${t('caregiver.noMissed')}</p>`
   }
 
   return `
@@ -338,10 +338,10 @@ function renderMissedHistory(records) {
       <table class="table-clean">
         <thead>
           <tr>
-            <th>Date & Time</th>
-            <th>Medicine</th>
-            <th>Status</th>
-            <th class="no-print">Action</th>
+            <th>${t('caregiver.dateTime')}</th>
+            <th>${t('caregiver.medicine')}</th>
+            <th>${t('caregiver.status')}</th>
+            <th class="no-print">${t('caregiver.action')}</th>
           </tr>
         </thead>
         <tbody>
@@ -353,12 +353,12 @@ function renderMissedHistory(records) {
               <td>${escapeHtml(r.medicationName)} <span class="text-secondary">(${escapeHtml(r.dosage)})</span></td>
               <td>
                 <span class="badge ${r.status === 'corrected' ? 'badge-upcoming' : 'badge-missed'}">
-                  ${r.status === 'corrected' ? 'Corrected Entry' : 'Unrecorded'}
+                  ${r.status === 'corrected' ? t('caregiver.correctedEntry') : t('caregiver.unrecorded')}
                 </span>
               </td>
               <td class="no-print">
                 <a href="#/dose-decision?medId=${encodeURIComponent(r.medicationId)}&time=${encodeURIComponent(r.time)}" class="btn btn-ghost btn-sm">
-                  DoseDecision ➔
+                  ${t('caregiver.doseDecision')}
                 </a>
               </td>
             </tr>
@@ -395,8 +395,8 @@ function renderNotesList(notes, medications) {
         </div>
         <p class="note-content mt-2">${escapeHtml(note.content)}</p>
         <div class="note-actions mt-3 no-print">
-          <button class="btn btn-ghost btn-sm btn-edit-note" data-id="${note.id}">Edit</button>
-          <button class="btn btn-ghost btn-sm text-danger btn-delete-note" data-id="${note.id}">Delete</button>
+          <button class="btn btn-ghost btn-sm btn-edit-note" data-id="${note.id}">${t('caregiver.edit')}</button>
+          <button class="btn btn-ghost btn-sm text-danger btn-delete-note" data-id="${note.id}">${t('caregiver.delete')}</button>
         </div>
       </article>
     `

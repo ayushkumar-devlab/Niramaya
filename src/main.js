@@ -1,6 +1,6 @@
 import './style.css'
 import { router } from './modules/router.js'
-import { initStore, getStore } from './modules/store.js'
+import { initStore, getStore, setStore, KEYS } from './modules/store.js'
 import { t, setLocale, getLocale, initLocale } from './i18n/index.js'
 
 // ─── View placeholders (dynamic imports with fallback) ───────────────────────
@@ -24,6 +24,7 @@ async function loadViews() {
 // ─── App Shell ───────────────────────────────────────────────────────────────
 function buildAppShell() {
   document.getElementById('app').innerHTML = `
+<a class="skip-link" href="#app-main">${t('a11y.skipToMain')}</a>
 <header id="app-header" role="banner">
   <div class="header-inner">
     <div class="header-brand">
@@ -126,8 +127,7 @@ function applyLocale() {
 // ─── Settings ────────────────────────────────────────────────────────────────
 function applySettings() {
   try {
-    const store = getStore()
-    const settings = store?.settings || {}
+    const settings = getStore(KEYS.SETTINGS) || {}
     const html = document.documentElement
 
     if (settings.seniorMode) {
@@ -136,7 +136,7 @@ function applySettings() {
       html.removeAttribute('data-senior')
     }
 
-    const lang = settings.lang || getLocale() || 'en'
+    const lang = settings.language || getLocale() || 'en'
     html.setAttribute('data-lang', lang)
     html.setAttribute('lang', lang)
   } catch (e) {
@@ -190,19 +190,14 @@ async function init() {
       }
 
       // Persist to store if available
-      try {
-        const store = getStore()
-        if (store?.settings) {
-          store.settings.seniorMode = !isSenior
-        }
-
-        const languageSelector = document.getElementById('language-selector')
-        if (languageSelector) {
-          languageSelector.value = getLocale()
-          languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
-        }
-      } catch (_) {}
+      const settings = getStore(KEYS.SETTINGS) || {}
+      setStore(KEYS.SETTINGS, { ...settings, seniorMode: !isSenior })
     })
+  }
+
+  const languageSelector = document.getElementById('language-selector')
+  if (languageSelector) {
+    languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
   }
 
   // 9. Register Service Worker with root scope

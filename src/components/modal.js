@@ -135,6 +135,7 @@ export function showModal({
 
     /* ── Close logic ── */
     let isClosing = false
+    let isFinished = false
 
     function closeModal(confirmed) {
       if (isClosing) return
@@ -156,6 +157,8 @@ export function showModal({
       }
 
       function finish() {
+        if (isFinished) return
+        isFinished = true
         backdrop.remove()
         if (confirmed) {
           onConfirm?.()
