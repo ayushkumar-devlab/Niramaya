@@ -31,17 +31,17 @@ function placeholderView(title) {
   return (container) => {
     container.innerHTML = `<div class="view-placeholder"><h1>${title}</h1><p>This feature is being built.</p></div>`
   }
+}
 
-  function renderNotFound(container) {
-    if (!container) return
-    container.innerHTML = `
-      <section class="view-container view-placeholder" aria-labelledby="not-found-heading">
-        <h1 id="not-found-heading" tabindex="-1">${t('routing.pageNotFoundTitle')}</h1>
-        <p>${t('routing.pageNotFoundBody')}</p>
-        <a class="btn btn-primary" href="/">${t('routing.goHome')}</a>
-      </section>
-    `
-  }
+function renderNotFound(container) {
+  if (!container) return
+  container.innerHTML = `
+    <section class="view-container view-placeholder" aria-labelledby="not-found-heading">
+      <h1 id="not-found-heading" tabindex="-1">${t('routing.pageNotFoundTitle')}</h1>
+      <p>${t('routing.pageNotFoundBody')}</p>
+      <a class="btn btn-primary" href="/">${t('routing.goHome')}</a>
+    </section>
+  `
 }
 
 async function loadViews() {

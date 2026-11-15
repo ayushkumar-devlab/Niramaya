@@ -96,6 +96,17 @@ describe('router.js (History API Router)', () => {
     expect(isAssetPath('/manifest.webmanifest')).toBe(true)
   })
 
+  it('invokes the not-found handler for an unknown route', () => {
+    let renderedPath = null
+    const container = {}
+    globalThis.document.getElementById = () => container
+    router.setNotFoundHandler((_target, route) => { renderedPath = route.path })
+    router.init()
+    window.location.pathname = '/not-a-route'
+    listeners.popstate?.()
+    expect(renderedPath).toBe('/not-a-route')
+  })
+
   it('normalizes trailing slashes and preserves query strings', () => {
     expect(normalizePath('/caregiver/?view=week')).toBe('/caregiver?view=week')
     expect(normalizePath('/')).toBe('/')
