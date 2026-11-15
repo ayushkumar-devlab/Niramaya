@@ -4,7 +4,9 @@ import { initStore, getStore, setStore, KEYS } from './modules/store.js'
 import { t, setLanguage, getLocale, initLocale } from './i18n/index.js'
 import { renderHowToUse } from './views/howToUse.js'
 import { showModal } from './components/modal.js'
-import { getSettings, saveSettings, applySettingsToDocument, nextTextSize } from './modules/settings.js'
+import { showToast } from './components/toast.js'
+import { getSettings, applySettingsToDocument } from './modules/settings.js'
+import { registerConnectivityListeners } from './modules/connectivity.js'
 
 // ─── View placeholders (dynamic imports with fallback) ───────────────────────
 let renderSenior, renderCaregiver, renderEmergency, renderDoseDecision, renderSafetyChecker, renderSettings
@@ -19,8 +21,6 @@ function iconSvg(name) {
     safety: '<path d="M12 3 19 6v5c0 4-2.5 7-7 9-4.5-2-7-5-7-9V6z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5v2m0 12v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M3 12h2m14 0h2M4.9 19.1l1.4-1.4M18 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     guide: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h7M8 12h7M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
-    globe: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16M12 4c2 2.2 3 4.8 3 8s-1 5.8-3 8c-2-2.2-3-4.8-3-8s1-5.8 3-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>',
-    textSize: '<path d="M4 19 9 5l5 14M6 14h6M16 8h5M18.5 8v11M16 19h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   }
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.guide}</svg>`
 }
@@ -52,26 +52,18 @@ function buildAppShell() {
       <span class="brand-name">Niramaya</span>
     </a>
     <div class="header-tools">
-    <span id="online-status" class="status-chip" role="status"><span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span></span>
-    <label class="language-selector">${iconSvg('globe')}
+    <span id="online-status" class="status-chip ${isOnline ? 'is-online' : 'is-offline'}" role="status">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span class="status-label">${isOnline ? t('a11y.online') : t('a11y.offline')}</span>
+    </span>
+    <label class="language-selector">
       <span class="sr-only">${t('settings.language')}</span>
-      <select id="language-selector" aria-label="${t('settings.language')}">
+      <select id="language-selector" aria-label="${t('a11y.languageSelector')}">
         <option value="en" lang="en">English</option>
         <option value="hi" lang="hi">हिन्दी</option>
         <option value="kn" lang="kn">ಕನ್ನಡ</option>
       </select>
     </label>
-    <div class="text-size-control">
-      ${iconSvg('textSize')}
-      <button id="text-size-menu-button" class="icon-button" type="button" aria-label="${t('settings.textSize')}" title="${t('settings.textSize')}" aria-haspopup="menu" aria-expanded="false">
-        ${iconSvg('textSize')}
-      </button>
-      <div id="text-size-menu" class="text-size-menu" role="menu" hidden aria-label="${t('settings.textSize')}">
-        ${[['large', 'settings.smallerText'], ['normal', 'settings.defaultText'], ['xlarge', 'settings.largerText']].map(([value, key]) => `
-          <button type="button" role="menuitemradio" aria-checked="${(getSettings().fontSize || 'normal') === value}" data-text-size-option="${value}">${t(key)}</button>
-        `).join('')}
-      </div>
-    </div>
     </div>
    </div>
    <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
@@ -105,7 +97,7 @@ function buildAppShell() {
 </nav>
 
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
-<div id="locale-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="locale-live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="modal-container"></div>
 <footer class="app-footer"><span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a></footer>
 `
@@ -147,19 +139,9 @@ function applyLocale() {
   const selector = document.getElementById('language-selector')
   if (selector) {
     selector.value = getLocale()
-    selector.setAttribute('aria-label', t('settings.language'))
+    selector.setAttribute('aria-label', t('a11y.languageSelector'))
   }
-  const textSizeButton = document.getElementById('text-size-menu-button')
-  if (textSizeButton) {
-    textSizeButton.setAttribute('aria-label', t('settings.textSize'))
-    textSizeButton.setAttribute('title', t('settings.textSize'))
-    document.querySelectorAll('[data-text-size-option]').forEach((option) => {
-      const value = option.dataset.textSizeOption
-      option.textContent = t({ large: 'settings.smallerText', normal: 'settings.defaultText', xlarge: 'settings.largerText' }[value])
-      option.setAttribute('aria-checked', String((getSettings().fontSize || 'normal') === value))
-    })
-  }
-  const status = document.querySelector('#online-status span:last-child')
+  const status = document.querySelector('#online-status .status-label')
   if (status) status.textContent = isOnline ? t('a11y.online') : t('a11y.offline')
   const footer = document.querySelector('.app-footer')
   if (footer) footer.innerHTML = `<span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a>`
@@ -214,54 +196,6 @@ async function init() {
   if (languageSelector) {
     languageSelector.addEventListener('change', (event) => setLanguage(event.target.value))
   }
-  const textSizeButton = document.getElementById('text-size-menu-button')
-  const textSizeMenu = document.getElementById('text-size-menu')
-  const textSizeOptions = [...document.querySelectorAll('[data-text-size-option]')]
-  const closeTextSizeMenu = ({ returnFocus = false } = {}) => {
-  if (!textSizeMenu || !textSizeButton) return
-  textSizeMenu.hidden = true
-  textSizeButton.setAttribute('aria-expanded', 'false')
-  if (returnFocus) textSizeButton.focus()
-  }
-  const openTextSizeMenu = () => {
-  if (!textSizeMenu || !textSizeButton) return
-  textSizeMenu.hidden = false
-  textSizeButton.setAttribute('aria-expanded', 'true')
-  textSizeOptions.find((option) => option.getAttribute('aria-checked') === 'true')?.focus()
-  }
-  textSizeButton?.addEventListener('click', () => {
-  if (textSizeMenu?.hidden) openTextSizeMenu()
-  else closeTextSizeMenu({ returnFocus: true })
-  })
-  textSizeOptions.forEach((option, index) => {
-  option.addEventListener('click', () => {
-    saveSettings({ fontSize: option.dataset.textSizeOption })
-    closeTextSizeMenu({ returnFocus: true })
-  })
-  option.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      closeTextSizeMenu({ returnFocus: true })
-    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-      event.preventDefault()
-      const nextIndex = event.key === 'ArrowDown' ? (index + 1) % textSizeOptions.length : (index - 1 + textSizeOptions.length) % textSizeOptions.length
-      textSizeOptions[nextIndex].focus()
-    }
-  })
-  })
-  textSizeButton?.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') closeTextSizeMenu()
-  if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    openTextSizeMenu()
-  }
-  })
-  document.addEventListener('click', (event) => {
-  if (textSizeMenu && textSizeButton && !textSizeMenu.contains(event.target) && !textSizeButton.contains(event.target)) {
-    closeTextSizeMenu()
-  }
-  })
-
   // 9. Register Service Worker with root scope
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
@@ -286,13 +220,25 @@ async function init() {
     updateNavActiveState(route)
   })
 
-  const updateOnlineStatus = () => {
-    isOnline = navigator.onLine
+  const updateOnlineStatus = (nextIsOnline, { announce = true } = {}) => {
+    const changed = isOnline !== nextIsOnline
+    isOnline = nextIsOnline
     const status = document.querySelector('#online-status')
-    if (status) status.innerHTML = `<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span>`
+    if (status) {
+      status.classList.toggle('is-online', isOnline)
+      status.classList.toggle('is-offline', !isOnline)
+      status.innerHTML = `<span class="status-dot" aria-hidden="true"></span><span class="status-label">${isOnline ? t('a11y.online') : t('a11y.offline')}</span>`
+    }
+    if (announce && changed) {
+      const messageKey = isOnline ? 'toast.backOnline' : 'toast.offline'
+      const message = t(messageKey)
+      const liveRegion = document.getElementById('locale-live-region')
+      if (liveRegion) liveRegion.textContent = message
+      showToast(message, isOnline ? 'success' : 'warning')
+    }
   }
-  window.addEventListener('online', updateOnlineStatus)
-  window.addEventListener('offline', updateOnlineStatus)
+  const connectivity = registerConnectivityListeners(window, (nextIsOnline) => updateOnlineStatus(nextIsOnline))
+  isOnline = connectivity.initial
 
   if (!(getStore(KEYS.SETTINGS) || {}).guideDismissed) {
     showModal({

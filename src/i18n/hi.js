@@ -376,9 +376,6 @@ export const hi = {
     textSize: 'अक्षर का आकार',
     decreaseText: 'अक्षर छोटे करें',
     increaseText: 'अक्षर बड़े करें',
-    smallerText: 'छोटा',
-    defaultText: 'डिफ़ॉल्ट',
-    largerText: 'बड़ा',
     textPreview: 'यह आपके अक्षर के आकार का नमूना है।',
     highContrast: 'ज़्यादा कंट्रास्ट',
     highContrastHelp: 'गहरे बॉर्डर और साफ़ अक्षर इस्तेमाल करें।',
@@ -444,6 +441,11 @@ export const hi = {
     version: 'निरामय v1.0',
   },
 
+  toast: {
+    offline: 'आप ऑफ़लाइन हैं। निरामय काम करता रहेगा और आपका डेटा इसी डिवाइस पर सुरक्षित रहेगा।',
+    backOnline: 'कनेक्शन वापस आ गया है।',
+  },
+
   common: {
     save: 'सहेजें',
     cancel: 'रद्द करें',
@@ -483,6 +485,7 @@ export const hi = {
     safetyLive: 'सुरक्षा जांच बदली: {count} समस्याएं मिलीं।',
     skipToMain: 'मुख्य सामग्री पर जाएं',
     logo: 'निरामय होम',
+    languageSelector: 'भाषा',
     online: 'ऑनलाइन',
     offline: 'ऑफ़लाइन',
   },

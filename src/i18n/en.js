@@ -376,9 +376,6 @@ export const en = {
     textSize: 'Text size',
     decreaseText: 'Decrease text size',
     increaseText: 'Increase text size',
-    smallerText: 'Smaller',
-    defaultText: 'Default',
-    largerText: 'Larger',
     textPreview: 'This is a preview of your text size.',
     highContrast: 'High contrast',
     highContrastHelp: 'Use stronger borders and text contrast.',
@@ -444,6 +441,11 @@ export const en = {
     version: 'Niramaya v1.0',
   },
 
+  toast: {
+    offline: 'You are offline. Niramaya keeps working and your data is saved on this device.',
+    backOnline: 'Back online.',
+  },
+
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -483,6 +485,7 @@ export const en = {
     safetyLive: 'Safety check updated: {count} issues found.',
     skipToMain: 'Skip to main content',
     logo: 'Niramaya home',
+    languageSelector: 'Language',
     online: 'Online',
     offline: 'Offline',
   },

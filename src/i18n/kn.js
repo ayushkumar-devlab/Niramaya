@@ -376,9 +376,6 @@ export const kn = {
     textSize: 'ಅಕ್ಷರದ ಗಾತ್ರ',
     decreaseText: 'ಅಕ್ಷರ ಚಿಕ್ಕದಾಗಿಸಿ',
     increaseText: 'ಅಕ್ಷರ ದೊಡ್ಡದಾಗಿಸಿ',
-    smallerText: 'ಚಿಕ್ಕದು',
-    defaultText: 'ಡೀಫಾಲ್ಟ್',
-    largerText: 'ದೊಡ್ಡದು',
     textPreview: 'ಇದು ನಿಮ್ಮ ಅಕ್ಷರದ ಗಾತ್ರದ ಮಾದರಿ.',
     highContrast: 'ಹೆಚ್ಚಿನ ಕಾಂಟ್ರಾಸ್ಟ್',
     highContrastHelp: 'ದಪ್ಪ ಅಂಚುಗಳು ಮತ್ತು ಸ್ಪಷ್ಟ ಅಕ್ಷರಗಳನ್ನು ಬಳಸಿ.',
@@ -444,6 +441,11 @@ export const kn = {
     version: 'ನಿರಾಮಯ v1.0',
   },
 
+  toast: {
+    offline: 'ನೀವು ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿದ್ದೀರಿ. ನಿರಾಮಯ ಕೆಲಸ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮ್ಮ ಡೇಟಾ ಈ ಸಾಧನದಲ್ಲೇ ಉಳಿಯುತ್ತದೆ.',
+    backOnline: 'ಮತ್ತೆ ಆನ್‌ಲೈನ್‌ಗೆ ಬಂದಿದ್ದೀರಿ.',
+  },
+
   common: {
     save: 'ಉಳಿಸಿ',
     cancel: 'ರದ್ದುಮಾಡಿ',
@@ -483,6 +485,7 @@ export const kn = {
     safetyLive: 'ಸುರಕ್ಷತೆ ಪರೀಕ್ಷೆ ಬದಲಾಗಿದೆ: {count} ಸಮಸ್ಯೆಗಳು ಕಂಡುಬಂದಿವೆ.',
     skipToMain: 'ಮುಖ್ಯ ವಿಷಯಕ್ಕೆ ಹೋಗಿ',
     logo: 'ನಿರಾಮಯ ಹೋಮ್',
+    languageSelector: 'ಭಾಷೆ',
     online: 'ಆನ್‌ಲೈನ್',
     offline: 'ಆಫ್‌ಲೈನ್',
   },
