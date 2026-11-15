@@ -1,80 +1,152 @@
 # Niramaya
 
-Niramaya is an offline-first medication companion for older adults in India and
-the people who help them. The primary persona is a senior user who needs a
-large, simple medication schedule; CareCircle provides a compact monitoring
-view for a trusted caregiver.
+> **Your trusted companion for safer medication management.**
 
-## What it does
+## Problem statement
 
-- Senior Mode medication CRUD, schedules, dose history, confirmations, and
-  read-aloud support.
-- DoseDecision presents recorded clinician instructions without inventing
-  missed-dose advice.
-- CareCircle adherence summaries, history, observations, and print reports.
-- Emergency Snapshot / Swasthya Card with local emergency information.
-- Safety Checker finds record-quality problems such as missing fields,
-  duplicate records, and conflicting schedules.
+Medication schedules, missed-dose questions, caregiver follow-up, and emergency
+details can be difficult to manage consistently, especially for older adults
+and their families. Niramaya keeps these records together in a simple,
+device-local interface.
+
+## Proposed solution
+
+Niramaya is an offline-first medication PWA with a large-text Senior Mode,
+local medication scheduling and dose history, an explainable DoseDecision
+workflow, CareCircle monitoring, an Emergency Snapshot / Swasthya Card, and a
+record-focused Safety Checker.
+
+## Target users
+
+- Elderly patients in India who need a clear daily medication schedule.
+- Caregivers and family members who monitor adherence and record observations.
+
+## Key features
+
+- Add, edit, soft-delete, and schedule medications with dosage, times,
+  instructions, and clinician-provided missed-dose notes.
+- Show today’s schedule with upcoming, due, taken, and not-recorded states.
+- Confirm dose recording and prevent duplicate dose logs.
+- **DoseDecision Assistant:** a rule-based, explainable presentation of
+  clinician-provided instructions. It does not diagnose, prescribe, or give
+  autonomous advice.
+- CareCircle PIN gate, seven-day adherence summary, missed-dose history,
+  caregiver observations, and printable reports.
+- Emergency Snapshot / Swasthya Card with patient-entered conditions, allergies,
+  contacts, clinician details, and active prescriptions.
+- Safety Checker for record mistakes such as missing fields, duplicate records,
+  duplicate ingredients, and schedule conflicts. It does not check drug
+  interactions.
 - English, Hindi, and Kannada interface with locale-aware dates, times, and
   numbers.
 - LocalStorage persistence and a same-origin service worker for offline use.
 
-## Safety design
+## What makes Niramaya different
 
-The app checks the quality and consistency of records. It does not diagnose,
-recommend treatment, check drug interactions, or replace a doctor or
-pharmacist. It never automatically changes a medicine, dose, or schedule.
-Medicine names, clinician names, contacts, and patient-entered notes are
-displayed as entered.
+The app is designed around local-first privacy and explainability. DoseDecision
+only presents saved clinician instructions and explicitly surfaces missing or
+conflicting information. The Safety Checker reviews record quality without
+inventing interactions or automatically changing a medicine, dose, or schedule.
+No AI or LLM is used in the application.
 
-## Accessibility
+## Technology stack
 
-The interface uses semantic landmarks, a skip link, visible keyboard focus,
-labelled controls, live status announcements, keyboard-safe dialogs, reduced
-motion support, responsive layouts, and larger controls in Senior Mode.
-Severity information is conveyed with text and icons, not colour alone.
+- Vanilla JavaScript using ES modules.
+- Vite `^8.3.6` for development and production bundling.
+- Vitest `^5.1.0` for tests.
+- Browser LocalStorage, native browser APIs, and a service worker.
+- No runtime or translation-library dependencies.
 
-## Privacy and offline behavior
+## System architecture
 
-Health and profile data stays in browser LocalStorage on the device. There are
-no translation APIs, analytics, external requests, or account services.
-The service worker caches the app shell and same-origin assets. Anyone with
-access to an unlocked device can view its locally stored data.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module map, data
+flow, storage keys, safety workflows, and offline architecture.
 
-## Setup
+## Installation
 
 ```bash
+npm install
+```
+
+On Windows PowerShell, the equivalent is:
+
+```powershell
 npm.cmd install
+```
+
+## Local development
+
+```bash
+npm run dev
+```
+
+```powershell
 npm.cmd run dev
 ```
 
-For a production build:
+Vite serves the application locally. The application uses hash navigation, so
+the routes are `#/senior`, `#/dose-decision`, `#/caregiver`, `#/emergency`,
+`#/safety`, and `#/settings`.
+
+## Testing
 
 ```bash
-npm.cmd run build
+npm test
+```
+
+```powershell
 npm.cmd test
 ```
 
-The application is a Vite vanilla JavaScript PWA. No runtime dependencies are
-required for translations or safety checking.
+## Production build
 
-## Milestones
+```bash
+npm run build
+npm run preview
+```
 
-1. Medication records and local persistence
-2. Scheduling and dose history
-3. DoseDecision safety presentation
-4. CareCircle and emergency information
-5. Offline PWA foundation
-6. Multilingual interface
-7. Medication Safety Checker
-8. Accessibility, responsive QA, privacy, and production-readiness polish
+```powershell
+npm.cmd run build
+npm.cmd run preview
+```
 
-## Assumptions and limitations
+The production output directory is `dist/`. The Vite configuration does not
+set a custom base, so the production base path is `/`.
 
-- LocalStorage is a device-local privacy boundary, not high-security
-  authentication or encrypted storage.
-- The Safety Checker only evaluates fields available in the saved records and
-  does not contain a drug interaction database.
-- Voice output depends on voices installed by the operating system.
-- Print and phone-call behavior depend on the browser and device.
-- This application is not medical advice.
+## Deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel dashboard and CLI
+instructions, verification, service-worker updates, troubleshooting, and
+rollback guidance. Niramaya is not deployed by this repository task; add the
+real live URL here only after completing a deployment:
+
+**Live URL:** _Add after deployment._
+
+## Privacy and safety limitations
+
+See [docs/PRIVACY-AND-SAFETY.md](docs/PRIVACY-AND-SAFETY.md) for the actual
+stored fields and keys, data-flow limitations, offline behavior, and the
+Safety Checker and DoseDecision boundaries.
+
+## Future enhancements (not implemented)
+
+- A hosted deployment URL and release automation.
+- Encrypted or synchronised multi-device storage.
+- A clinical interaction database from a verified medical source.
+- Automated browser accessibility and visual regression coverage.
+
+These are ideas only and are not implemented features.
+
+## Documentation index
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Privacy and safety](docs/PRIVACY-AND-SAFETY.md)
+- [Five-minute demo script](docs/DEMO-SCRIPT.md)
+
+## Disclaimer
+
+Niramaya is not medical advice and does not replace a doctor or pharmacist.
+Follow verified instructions from a qualified healthcare professional. When
+records are missing, incomplete, or conflicting, seek professional
+verification.
