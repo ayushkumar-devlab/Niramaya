@@ -40,13 +40,8 @@ export function renderEmergency(container) {
       <!-- High-Contrast Emergency Banner Header -->
       <header class="emergency-hero-banner" role="banner">
         <div class="emergency-print-brand"><img src="/logo.svg" alt="${t('a11y.logo')}"><strong>Niramaya</strong></div>
-        <div class="emergency-badge-lead">
-          <span class="emergency-pulse-icon" aria-hidden="true">🚨</span>
-          <span>${t('emergency.badgeTitle')}</span>
-        </div>
-        <h1 id="emergency-card-title" class="emergency-patient-name" tabindex="-1">
-          ${escapeHtml(data.patientName || t('emergency.medicalEmergencyCard'))}
-        </h1>
+        <h1 id="emergency-card-title" class="emergency-card-title" tabindex="-1">${t('emergency.medicalEmergencyCard')}</h1>
+        ${data.patientName ? `<p class="emergency-patient-name">${escapeHtml(data.patientName)}</p>` : ''}
         <div class="emergency-vitals-row mt-2">
           ${data.age ? `<span class="vital-pill"><strong>${t('emergency.age')}</strong> ${escapeHtml(data.age)}</span>` : ''}
           ${data.bloodType ? `<span class="vital-pill blood-pill"><strong>${t('emergency.bloodLabel')}</strong> ${escapeHtml(data.bloodType)}</span>` : ''}

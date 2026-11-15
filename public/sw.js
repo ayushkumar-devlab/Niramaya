@@ -1,4 +1,4 @@
-const CACHE_NAME = 'niramaya-v7'
+const CACHE_NAME = 'niramaya-v8'
 const OFFLINE_URL = '/'
 
 // Assets to pre-cache on install

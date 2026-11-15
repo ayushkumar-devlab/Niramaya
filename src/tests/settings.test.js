@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getStore, initStore, KEYS } from '../modules/store.js'
-import { getSettings, nextTextSize, saveSettings, TEXT_SIZES } from '../modules/settings.js'
+import { applySettingsToDocument, getSettings, nextTextSize, saveSettings, TEXT_SIZES } from '../modules/settings.js'
 
 describe('settings state', () => {
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('settings state', () => {
     }
     globalThis.document = {
       dispatchEvent: () => {},
-      documentElement: { setAttribute: () => {}, toggleAttribute: () => {}, style: {} },
+      documentElement: { setAttribute: () => {}, removeAttribute: () => {}, toggleAttribute: () => {}, style: {} },
     }
     initStore()
   })
@@ -29,5 +29,11 @@ describe('settings state', () => {
     expect(nextTextSize('normal', 'down')).toBe(TEXT_SIZES[0])
     expect(nextTextSize('xlarge', 'up')).toBe(TEXT_SIZES[2])
     expect(nextTextSize('normal', 'up')).toBe('large')
+  })
+
+  it('applies the persisted text size to the root immediately', () => {
+    saveSettings({ fontSize: 'xlarge' })
+    applySettingsToDocument()
+    expect(document.documentElement.style.fontSize).toBe('20px')
   })
 })

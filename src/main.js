@@ -52,7 +52,7 @@ function buildAppShell() {
       <span class="brand-name">Niramaya</span>
     </a>
     <div class="header-tools">
-    <span id="online-status" class="status-chip" role="status">${iconSvg('globe')}<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span></span>
+    <span id="online-status" class="status-chip" role="status"><span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span></span>
     <label class="language-selector">${iconSvg('globe')}
       <span class="sr-only">${t('settings.language')}</span>
       <select id="language-selector" aria-label="${t('settings.language')}">
@@ -61,10 +61,16 @@ function buildAppShell() {
         <option value="kn" lang="kn">ಕನ್ನಡ</option>
       </select>
     </label>
-    <div class="text-size-control" role="group" aria-label="${t('settings.textSize')}">
+    <div class="text-size-control">
       ${iconSvg('textSize')}
-      <button id="text-size-decrease" type="button" aria-label="${t('settings.decreaseText')}" title="${t('settings.decreaseText')}">A−</button>
-      <button id="text-size-increase" type="button" aria-label="${t('settings.increaseText')}" title="${t('settings.increaseText')}">A+</button>
+      <button id="text-size-menu-button" class="icon-button" type="button" aria-label="${t('settings.textSize')}" title="${t('settings.textSize')}" aria-haspopup="menu" aria-expanded="false">
+        ${iconSvg('textSize')}
+      </button>
+      <div id="text-size-menu" class="text-size-menu" role="menu" hidden aria-label="${t('settings.textSize')}">
+        ${[['large', 'settings.smallerText'], ['normal', 'settings.defaultText'], ['xlarge', 'settings.largerText']].map(([value, key]) => `
+          <button type="button" role="menuitemradio" aria-checked="${(getSettings().fontSize || 'normal') === value}" data-text-size-option="${value}">${t(key)}</button>
+        `).join('')}
+      </div>
     </div>
     </div>
    </div>
@@ -143,15 +149,15 @@ function applyLocale() {
     selector.value = getLocale()
     selector.setAttribute('aria-label', t('settings.language'))
   }
-  const textSizeControl = document.querySelector('.text-size-control')
-  if (textSizeControl) {
-    textSizeControl.setAttribute('aria-label', t('settings.textSize'))
-    const decrease = document.getElementById('text-size-decrease')
-    const increase = document.getElementById('text-size-increase')
-    decrease?.setAttribute('aria-label', t('settings.decreaseText'))
-    decrease?.setAttribute('title', t('settings.decreaseText'))
-    increase?.setAttribute('aria-label', t('settings.increaseText'))
-    increase?.setAttribute('title', t('settings.increaseText'))
+  const textSizeButton = document.getElementById('text-size-menu-button')
+  if (textSizeButton) {
+    textSizeButton.setAttribute('aria-label', t('settings.textSize'))
+    textSizeButton.setAttribute('title', t('settings.textSize'))
+    document.querySelectorAll('[data-text-size-option]').forEach((option) => {
+      const value = option.dataset.textSizeOption
+      option.textContent = t({ large: 'settings.smallerText', normal: 'settings.defaultText', xlarge: 'settings.largerText' }[value])
+      option.setAttribute('aria-checked', String((getSettings().fontSize || 'normal') === value))
+    })
   }
   const status = document.querySelector('#online-status span:last-child')
   if (status) status.textContent = isOnline ? t('a11y.online') : t('a11y.offline')
@@ -208,12 +214,53 @@ async function init() {
   if (languageSelector) {
     languageSelector.addEventListener('change', (event) => setLanguage(event.target.value))
   }
-  const changeTextSize = (direction) => {
-      const settings = getSettings()
-      saveSettings({ fontSize: nextTextSize(settings.fontSize || 'normal', direction) })
+  const textSizeButton = document.getElementById('text-size-menu-button')
+  const textSizeMenu = document.getElementById('text-size-menu')
+  const textSizeOptions = [...document.querySelectorAll('[data-text-size-option]')]
+  const closeTextSizeMenu = ({ returnFocus = false } = {}) => {
+  if (!textSizeMenu || !textSizeButton) return
+  textSizeMenu.hidden = true
+  textSizeButton.setAttribute('aria-expanded', 'false')
+  if (returnFocus) textSizeButton.focus()
   }
-  document.getElementById('text-size-decrease')?.addEventListener('click', () => changeTextSize('down'))
-  document.getElementById('text-size-increase')?.addEventListener('click', () => changeTextSize('up'))
+  const openTextSizeMenu = () => {
+  if (!textSizeMenu || !textSizeButton) return
+  textSizeMenu.hidden = false
+  textSizeButton.setAttribute('aria-expanded', 'true')
+  textSizeOptions.find((option) => option.getAttribute('aria-checked') === 'true')?.focus()
+  }
+  textSizeButton?.addEventListener('click', () => {
+  if (textSizeMenu?.hidden) openTextSizeMenu()
+  else closeTextSizeMenu({ returnFocus: true })
+  })
+  textSizeOptions.forEach((option, index) => {
+  option.addEventListener('click', () => {
+    saveSettings({ fontSize: option.dataset.textSizeOption })
+    closeTextSizeMenu({ returnFocus: true })
+  })
+  option.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      closeTextSizeMenu({ returnFocus: true })
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      const nextIndex = event.key === 'ArrowDown' ? (index + 1) % textSizeOptions.length : (index - 1 + textSizeOptions.length) % textSizeOptions.length
+      textSizeOptions[nextIndex].focus()
+    }
+  })
+  })
+  textSizeButton?.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeTextSizeMenu()
+  if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    openTextSizeMenu()
+  }
+  })
+  document.addEventListener('click', (event) => {
+  if (textSizeMenu && textSizeButton && !textSizeMenu.contains(event.target) && !textSizeButton.contains(event.target)) {
+    closeTextSizeMenu()
+  }
+  })
 
   // 9. Register Service Worker with root scope
   if ('serviceWorker' in navigator) {
@@ -242,7 +289,7 @@ async function init() {
   const updateOnlineStatus = () => {
     isOnline = navigator.onLine
     const status = document.querySelector('#online-status')
-    if (status) status.innerHTML = `${iconSvg('globe')}<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span>`
+    if (status) status.innerHTML = `<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span>`
   }
   window.addEventListener('online', updateOnlineStatus)
   window.addEventListener('offline', updateOnlineStatus)
