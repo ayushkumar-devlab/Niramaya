@@ -1,4 +1,4 @@
-// medications.js — Medication CRUD, schedule engine, and dose logging
+// medications.js — Medication CRUD, schedule engine, dose logging, and dose correction with audit logging
 
 import { KEYS, getStore, updateStore } from './store.js'
 
@@ -25,7 +25,7 @@ export const DEFAULT_FREQUENCY_TIMES = {
 // ---------------------------------------------------------------------------
 
 /**
- * Returns a date formatted as YYYY-MM-DD.
+ * Returns a date formatted as YYYY-MM-DD in local time.
  * @param {Date} [d=new Date()]
  * @returns {string}
  */
@@ -211,6 +211,9 @@ export function updateMedication(id, data) {
         name: merged.name.trim(),
         dosage: (merged.dosage || merged.dose || '').trim(),
         dose: (merged.dosage || merged.dose || '').trim(),
+        activeIngredient: (merged.activeIngredient || '').trim(),
+        instructions: (merged.instructions || '').trim(),
+        clinicianInstructions: (merged.clinicianInstructions || '').trim(),
         times: cleanedTimes,
         id: m.id,
         createdAt: m.createdAt,
@@ -258,6 +261,8 @@ export function deleteMedication(id) {
  * - 'due': now is between (scheduled - 15m) and (scheduled + MISSED_THRESHOLD_MINUTES).
  * - 'upcoming': now is before (scheduled - 15m).
  * - 'missed': now is more than MISSED_THRESHOLD_MINUTES past scheduled time and not taken.
+ *
+ * Supports midnight boundary comparison using clock reference.
  *
  * @param {string} scheduledTime - "HH:MM"
  * @param {object|null} doseLog
@@ -345,6 +350,29 @@ export function getTodaysSchedule(clock = new Date()) {
   return schedule
 }
 
+/**
+ * Finds the next upcoming or due dose across today's schedule.
+ * If all today's doses are taken or none remain, returns null.
+ *
+ * @param {Date} [clock=new Date()]
+ * @returns {{ medication: object, scheduledTime: string, status: string }|null}
+ */
+export function getNextScheduledDose(clock = new Date()) {
+  const schedule = getTodaysSchedule(clock)
+  if (schedule.length === 0) return null
+
+  // First look for any currently 'due' dose
+  const dueDose = schedule.find((item) => item.status === 'due')
+  if (dueDose) return dueDose
+
+  // Next look for upcoming doses
+  const upcomingDose = schedule.find((item) => item.status === 'upcoming')
+  if (upcomingDose) return upcomingDose
+
+  // If nothing due or upcoming, return null
+  return null
+}
+
 // ---------------------------------------------------------------------------
 // Dose Logging & Duplicate Prevention
 // ---------------------------------------------------------------------------
@@ -402,6 +430,65 @@ export function logDose(medicationId, scheduledTime, clock = new Date()) {
   }
 
   return { success: true, doseLog: newLog }
+}
+
+/**
+ * Corrects an accidental dose entry with an audit trail.
+ * Marks the dose as 'cancelled' (or removes it from active taken status)
+ * and records an entry in DOSE_AUDIT_LOGS.
+ *
+ * @param {string} doseLogId
+ * @param {string} [reason='Accidental entry']
+ * @param {Date} [clock=new Date()]
+ * @returns {{ success: boolean, error?: string }}
+ */
+export function correctAccidentalDose(doseLogId, reason = 'Accidental entry', clock = new Date()) {
+  let found = null
+
+  updateStore(KEYS.DOSE_LOGS, (current) => {
+    const list = Array.isArray(current) ? current : []
+    const next = []
+    for (const log of list) {
+      if (log.id === doseLogId) {
+        found = log
+      } else {
+        next.push(log)
+      }
+    }
+    return next
+  })
+
+  if (!found) {
+    return { success: false, error: 'Dose record not found' }
+  }
+
+  // Create audit record
+  const auditEntry = {
+    id: _genId(),
+    originalDoseLogId: doseLogId,
+    medicationId: found.medicationId,
+    scheduledTime: found.scheduledTime,
+    date: found.date,
+    action: 'corrected_accidental_entry',
+    reason,
+    correctedAt: clock.toISOString(),
+  }
+
+  updateStore(KEYS.DOSE_AUDIT_LOGS, (current) => {
+    const audits = Array.isArray(current) ? current : []
+    return [...audits, auditEntry]
+  })
+
+  return { success: true, auditEntry }
+}
+
+/**
+ * Returns all dose audit logs.
+ * @returns {Array<object>}
+ */
+export function getDoseAuditLogs() {
+  const list = getStore(KEYS.DOSE_AUDIT_LOGS) ?? []
+  return Array.isArray(list) ? list : []
 }
 
 /**

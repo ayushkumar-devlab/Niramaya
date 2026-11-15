@@ -11,6 +11,7 @@ export const KEYS = {
   CAREGIVER: 'nm_caregiver',
   SETTINGS: 'nm_settings',
   CAREGIVER_NOTES: 'nm_caregiver_notes',
+  DOSE_AUDIT_LOGS: 'nm_dose_audit_logs',
 }
 
 const DEFAULTS = {
@@ -40,6 +41,7 @@ const DEFAULTS = {
     fontSize: 'normal',
   },
   [KEYS.CAREGIVER_NOTES]: [],
+  [KEYS.DOSE_AUDIT_LOGS]: [],
 }
 
 /**
@@ -48,7 +50,6 @@ const DEFAULTS = {
  */
 function _migrate(storedVersion) {
   try {
-    // Migration logic for future versions
     if (storedVersion < 1) {
       // initial baseline
     }
@@ -95,7 +96,6 @@ export function getStore(key) {
     return JSON.parse(raw)
   } catch (err) {
     console.warn(`[store] Corrupted or unreadable JSON for key "${key}". Resetting to default.`, err)
-    // If key is corrupted, restore default safely
     const fallback = DEFAULTS[key] ?? null
     if (fallback !== null) {
       setStore(key, fallback)

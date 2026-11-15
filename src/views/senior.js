@@ -1,12 +1,14 @@
-// src/views/senior.js — Complete Senior Mode view with schedule, TTS, add/edit/delete, and safe dose logging
+// src/views/senior.js — Complete Senior Mode view with today's date, next medicine banner, schedule, TTS, add/edit/delete, safe dose logging & audit undo
 
 import { t, getLocale } from '../i18n/index.js'
 import {
   getTodaysSchedule,
+  getNextScheduledDose,
   addMedication,
   updateMedication,
   deleteMedication,
   logDose,
+  correctAccidentalDose,
   FREQUENCIES,
   DEFAULT_FREQUENCY_TIMES,
 } from '../modules/medications.js'
@@ -16,7 +18,6 @@ import { showToast } from '../components/toast.js'
 
 /**
  * Format 24h 'HH:MM' into friendly 12h display with AM/PM
- * e.g. '08:00' -> '8:00 AM', '20:30' -> '8:30 PM'
  * @param {string} timeStr
  * @returns {string}
  */
@@ -31,7 +32,24 @@ function formatTime12h(timeStr) {
 }
 
 /**
+ * Format today's date nicely according to locale
+ * @param {string} locale
+ * @returns {string}
+ */
+function getFormattedTodayDate(locale = 'en') {
+  const now = new Date()
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
+  const langCode = locale === 'hi' ? 'hi-IN' : locale === 'kn' ? 'kn-IN' : 'en-IN'
+  try {
+    return new Intl.DateTimeFormat(langCode, options).format(now)
+  } catch (_) {
+    return now.toDateString()
+  }
+}
+
+/**
  * Status icon and styling helper
+ * Clearly distinguishes Taken, Upcoming and Not Recorded (due/missed)
  * @param {'taken'|'due'|'upcoming'|'missed'} status
  */
 function getStatusBadge(status) {
@@ -77,6 +95,7 @@ export function renderSenior(container) {
       <div class="senior-header">
         <div class="senior-title-group">
           <h1 id="senior-page-heading" class="senior-heading" tabindex="-1"></h1>
+          <p class="senior-date-badge" id="senior-today-date"></p>
           <p class="senior-subtitle" id="senior-subtitle-text"></p>
         </div>
 
@@ -92,6 +111,9 @@ export function renderSenior(container) {
         </div>
       </div>
 
+      <!-- Next Scheduled Medicine Spotlight -->
+      <section id="senior-next-dose-section" class="mb-4" aria-label="${t('senior.nextDoseBannerTitle')}"></section>
+
       <div id="senior-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
       <!-- Schedule Content Area -->
@@ -103,6 +125,11 @@ export function renderSenior(container) {
   // Text contents set safely
   const headingEl = container.querySelector('#senior-page-heading')
   if (headingEl) headingEl.textContent = t('senior.title')
+
+  const dateBadgeEl = container.querySelector('#senior-today-date')
+  if (dateBadgeEl) {
+    dateBadgeEl.textContent = `📅 ${getFormattedTodayDate(getLocale())}`
+  }
 
   const subtitleEl = container.querySelector('#senior-subtitle-text')
   if (subtitleEl) subtitleEl.textContent = t('senior.subtitle')
@@ -126,10 +153,13 @@ export function renderSenior(container) {
    * Refreshes and renders schedule items safely
    */
   function refreshSchedule() {
+    const nextDoseSection = container.querySelector('#senior-next-dose-section')
     const scheduleListEl = container.querySelector('#senior-schedule-list')
     if (!scheduleListEl) return
 
     scheduleListEl.innerHTML = ''
+    if (nextDoseSection) nextDoseSection.innerHTML = ''
+
     const schedule = getTodaysSchedule()
 
     if (schedule.length === 0) {
@@ -161,6 +191,25 @@ export function renderSenior(container) {
       emptyCard.appendChild(emptyAddBtn)
       scheduleListEl.appendChild(emptyCard)
       return
+    }
+
+    // Next Scheduled Medicine Spotlight Banner
+    const nextDose = getNextScheduledDose()
+    if (nextDose && nextDoseSection) {
+      const banner = document.createElement('div')
+      banner.className = 'card next-dose-spotlight'
+      banner.innerHTML = `
+        <div class="next-dose-header">
+          <span class="next-dose-badge" aria-hidden="true">🔔</span>
+          <span class="next-dose-label">${t('senior.nextDoseBannerTitle')}</span>
+        </div>
+        <div class="next-dose-body mt-2">
+          <p class="next-dose-time-lead">${t('senior.nextDoseAt').replace('{time}', formatTime12h(nextDose.scheduledTime))}</p>
+          <h2 class="next-dose-med-title">${escapeHtml(nextDose.medication.name)} <span class="next-dose-dosage">(${escapeHtml(nextDose.medication.dosage || nextDose.medication.dose || '')})</span></h2>
+          ${nextDose.medication.instructions ? `<p class="next-dose-inst mt-1 text-secondary">ℹ️ ${escapeHtml(nextDose.medication.instructions)}</p>` : ''}
+        </div>
+      `
+      nextDoseSection.appendChild(banner)
     }
 
     // Check if all are taken
@@ -208,7 +257,7 @@ export function renderSenior(container) {
  * Creates an individual accessible Dose Card
  */
 function createDoseCard(item, index, refreshSchedule, announce) {
-  const { medication, scheduledTime, status } = item
+  const { medication, scheduledTime, status, doseLog } = item
   const badgeInfo = getStatusBadge(status)
   const isTaken = status === 'taken'
 
@@ -233,7 +282,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   headerRow.appendChild(statusBadge)
   card.appendChild(headerRow)
 
-  // Medication Name & Dosage row
+  // Medication Name, Active Ingredient & Dosage row
   const bodySection = document.createElement('div')
   bodySection.className = 'dose-card-body'
 
@@ -249,7 +298,18 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   bodySection.appendChild(titleEl)
   bodySection.appendChild(dosageEl)
 
-  // Special instructions (if any)
+  // Active Ingredient (if entered)
+  if (medication.activeIngredient) {
+    const aiEl = document.createElement('p')
+    aiEl.className = 'dose-active-ingredient'
+    aiEl.innerHTML = `<span class="ai-label">Active:</span> `
+    const aiText = document.createElement('span')
+    aiText.textContent = medication.activeIngredient
+    aiEl.appendChild(aiText)
+    bodySection.appendChild(aiEl)
+  }
+
+  // Instructions (if any)
   if (medication.instructions) {
     const instEl = document.createElement('p')
     instEl.className = 'dose-instructions'
@@ -258,6 +318,17 @@ function createDoseCard(item, index, refreshSchedule, announce) {
     instText.textContent = medication.instructions
     instEl.appendChild(instText)
     bodySection.appendChild(instEl)
+  }
+
+  // Clinician Notes (if any)
+  if (medication.clinicianInstructions) {
+    const clinEl = document.createElement('p')
+    clinEl.className = 'dose-clinician-notes'
+    clinEl.innerHTML = `<span aria-hidden="true">🩺</span> <strong>Clinician:</strong> `
+    const clinText = document.createElement('span')
+    clinText.textContent = medication.clinicianInstructions
+    clinEl.appendChild(clinText)
+    bodySection.appendChild(clinEl)
   }
 
   card.appendChild(bodySection)
@@ -312,18 +383,53 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   })
   footerRow.appendChild(btnDelete)
 
-  // Primary Action: Mark as Taken Button
-  const btnTake = document.createElement('button')
-  btnTake.className = `btn ${isTaken ? 'btn-taken' : 'btn-primary'} btn-take-action`
-  btnTake.type = 'button'
-  btnTake.disabled = isTaken
-
+  // Primary Action: Mark as Taken Button or Undo Taken with Audit Trail
   if (isTaken) {
-    btnTake.innerHTML = `<span aria-hidden="true">✓</span> <span>${t('senior.taken')}</span>`
+    const takenContainer = document.createElement('div')
+    takenContainer.className = 'taken-action-group'
+
+    const btnTakenStatus = document.createElement('button')
+    btnTakenStatus.className = 'btn btn-taken btn-take-action'
+    btnTakenStatus.type = 'button'
+    btnTakenStatus.disabled = true
+    btnTakenStatus.innerHTML = `<span aria-hidden="true">✓</span> <span>${t('senior.taken')}</span>`
+    takenContainer.appendChild(btnTakenStatus)
+
+    // Correction button for accidental entries
+    const btnUndo = document.createElement('button')
+    btnUndo.className = 'btn btn-ghost btn-undo-dose'
+    btnUndo.type = 'button'
+    btnUndo.setAttribute('aria-label', t('senior.undoTaken'))
+    btnUndo.innerHTML = `<span aria-hidden="true">↩️</span> <span>${t('senior.undoTaken')}</span>`
+    btnUndo.addEventListener('click', async () => {
+      const confirmed = await showModal({
+        title: t('senior.undoConfirmTitle'),
+        content: t('senior.undoConfirmBody')
+          .replace('{medName}', medication.name)
+          .replace('{time}', formatTime12h(scheduledTime)),
+        confirmText: t('common.confirm'),
+        cancelText: t('common.cancel'),
+      })
+
+      if (confirmed && doseLog) {
+        const correctRes = correctAccidentalDose(doseLog.id, 'User corrected accidental taken mark')
+        if (correctRes.success) {
+          const undoMsg = t('senior.undoSuccessToast').replace('{medName}', medication.name)
+          announce(undoMsg)
+          showToast(undoMsg, 'info')
+          refreshSchedule()
+        }
+      }
+    })
+    takenContainer.appendChild(btnUndo)
+    footerRow.appendChild(takenContainer)
   } else {
+    const btnTake = document.createElement('button')
+    btnTake.className = 'btn btn-primary btn-take-action'
+    btnTake.type = 'button'
     btnTake.innerHTML = `<span aria-hidden="true">💊</span> <span>${t('senior.markTaken')}</span>`
     btnTake.addEventListener('click', async () => {
-      // Step 3 Confirmation Dialog
+      // Confirmation Dialog before recording
       const confirmed = await showModal({
         title: t('senior.confirmTakenTitle'),
         content: t('senior.confirmTakenQuestion')
@@ -347,11 +453,10 @@ function createDoseCard(item, index, refreshSchedule, announce) {
         }
       }
     })
+    footerRow.appendChild(btnTake)
   }
 
-  footerRow.appendChild(btnTake)
   card.appendChild(footerRow)
-
   return card
 }
 
@@ -446,6 +551,19 @@ function openMedicationModal(medToEdit = null, onSaved) {
       </div>
 
       <div class="form-group mb-4">
+        <label for="form-med-active" class="form-label">${t('med.activeIngredient')}</label>
+        <input
+          id="form-med-active"
+          name="activeIngredient"
+          type="text"
+          class="form-input"
+          maxlength="100"
+          placeholder="${t('med.activeIngredientPlaceholder')}"
+          value="${isEdit ? escapeHtml(medToEdit.activeIngredient || '') : ''}"
+        />
+      </div>
+
+      <div class="form-group mb-4">
         <label for="form-med-frequency" class="form-label">${t('med.frequency')}</label>
         <select id="form-med-frequency" class="form-select form-input-lg">
           <option value="${FREQUENCIES.ONCE_DAILY}">${t('med.frequencies.once_daily')}</option>
@@ -485,7 +603,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
           class="form-textarea"
           rows="2"
           maxlength="300"
-          placeholder="Verified clinician-provided instructions"
+          placeholder="${t('med.clinicianInstructionsPlaceholder')}"
         >${isEdit ? escapeHtml(medToEdit.clinicianInstructions || '') : ''}</textarea>
       </div>
 
@@ -493,7 +611,6 @@ function openMedicationModal(medToEdit = null, onSaved) {
     </form>
   `
 
-  // Select frequency value
   const selectFreq = formWrapper.querySelector('#form-med-frequency')
   if (selectFreq) {
     selectFreq.value = currentFrequency
@@ -535,7 +652,6 @@ function openMedicationModal(medToEdit = null, onSaved) {
 
   renderTimesInputs()
 
-  // Frequency change automatically populates standard times
   if (selectFreq) {
     selectFreq.addEventListener('change', (e) => {
       const freq = e.target.value
@@ -547,7 +663,6 @@ function openMedicationModal(medToEdit = null, onSaved) {
     })
   }
 
-  // Add time button
   const btnAddTime = formWrapper.querySelector('#btn-add-time')
   if (btnAddTime) {
     btnAddTime.addEventListener('click', () => {
@@ -556,7 +671,6 @@ function openMedicationModal(medToEdit = null, onSaved) {
     })
   }
 
-  // Open in accessible modal
   showModal({
     title: isEdit ? t('med.editTitle') : t('med.addTitle'),
     content: formWrapper,
@@ -565,6 +679,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
     onConfirm: async () => {
       const nameInput = formWrapper.querySelector('#form-med-name')
       const dosageInput = formWrapper.querySelector('#form-med-dosage')
+      const activeInput = formWrapper.querySelector('#form-med-active')
       const instInput = formWrapper.querySelector('#form-med-instructions')
       const clinInput = formWrapper.querySelector('#form-med-clinician')
       const genError = formWrapper.querySelector('#form-general-error')
@@ -572,6 +687,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
       const payload = {
         name: nameInput.value,
         dosage: dosageInput.value,
+        activeIngredient: activeInput ? activeInput.value : '',
         frequency: currentFrequency,
         times: currentTimes,
         instructions: instInput.value,
@@ -591,7 +707,7 @@ function openMedicationModal(medToEdit = null, onSaved) {
           genError.style.display = 'block'
         }
         showToast(res.errors[0], 'error')
-        return false // Keep modal open
+        return false
       }
 
       showToast(isEdit ? `${payload.name} updated` : `${payload.name} added`, 'success')

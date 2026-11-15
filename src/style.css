@@ -1282,3 +1282,107 @@ select.form-input {
   color: var(--danger);
   font-weight: bold;
 }
+
+/* ── 22. Spotlight Banner & Date Badge ────────────────────── */
+.senior-date-badge {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--teal);
+  margin-top: 4px;
+}
+
+[data-senior="true"] .senior-date-badge {
+  font-size: 1.375rem; /* >= 22px */
+}
+
+.next-dose-spotlight {
+  background: linear-gradient(135deg, #0f1b30 0%, #1a2b4a 100%);
+  color: var(--white);
+  border: 2px solid var(--teal);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
+}
+
+.next-dose-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.next-dose-badge {
+  font-size: 1.5rem;
+}
+
+.next-dose-label {
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--teal-light);
+  font-weight: 700;
+}
+
+.next-dose-time-lead {
+  font-size: var(--text-base);
+  color: #cbd5e1;
+}
+
+.next-dose-med-title {
+  font-size: 1.75rem;
+  color: var(--white);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+[data-senior="true"] .next-dose-med-title {
+  font-size: 2.125rem;
+}
+
+.next-dose-dosage {
+  font-size: 1.25rem;
+  color: var(--teal-light);
+  font-weight: 600;
+}
+
+.taken-action-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-grow: 1;
+  flex-wrap: wrap;
+}
+
+.btn-undo-dose {
+  min-height: 60px;
+  min-width: 160px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border: 2px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-undo-dose:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.dose-active-ingredient {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.dose-clinician-notes {
+  font-size: var(--text-sm);
+  color: var(--navy);
+  background: rgba(26, 43, 74, 0.06);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--navy-light);
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-1);
+}

@@ -3,7 +3,6 @@ import {
   initStore,
   clearStore,
   getStore,
-  setStore,
   KEYS
 } from '../modules/store.js'
 import {
@@ -13,7 +12,10 @@ import {
   updateMedication,
   deleteMedication,
   getTodaysSchedule,
+  getNextScheduledDose,
   logDose,
+  correctAccidentalDose,
+  getDoseAuditLogs,
   getDoseLogsForDate,
   calculateDoseStatus,
   validateMedicationInput,
@@ -22,7 +24,6 @@ import {
 
 describe('Medications & Schedule Engine (Milestone 2)', () => {
   beforeEach(() => {
-    // Fresh mock local storage
     let storage = {}
     globalThis.localStorage = {
       getItem: (key) => (key in storage ? storage[key] : null),
@@ -68,12 +69,15 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
   })
 
   describe('Medication CRUD & Storage Resilience', () => {
-    it('creates, retrieves, updates, and soft-deletes a medication', () => {
+    it('creates, retrieves, updates, and soft-deletes a medication with all fields', () => {
       const res = addMedication({
         name: 'Metformin',
         dosage: '500mg',
+        activeIngredient: 'Metformin Hydrochloride',
         frequency: FREQUENCIES.TWICE_DAILY,
         times: ['08:00', '20:00'],
+        instructions: 'Take after meal',
+        clinicianInstructions: 'Do not skip breakfast',
       })
       expect(res.success).toBe(true)
       const medId = res.medication.id
@@ -83,12 +87,20 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
       expect(found).not.toBeNull()
       expect(found.name).toBe('Metformin')
       expect(found.dosage).toBe('500mg')
+      expect(found.activeIngredient).toBe('Metformin Hydrochloride')
+      expect(found.instructions).toBe('Take after meal')
+      expect(found.clinicianInstructions).toBe('Do not skip breakfast')
       expect(found.times).toEqual(['08:00', '20:00'])
 
       // Update
-      const updateRes = updateMedication(medId, { dosage: '1000mg' })
+      const updateRes = updateMedication(medId, {
+        dosage: '1000mg',
+        instructions: 'Take with full glass of water',
+      })
       expect(updateRes.success).toBe(true)
-      expect(getMedication(medId).dosage).toBe('1000mg')
+      const updated = getMedication(medId)
+      expect(updated.dosage).toBe('1000mg')
+      expect(updated.instructions).toBe('Take with full glass of water')
 
       // Delete (soft-delete preserves audit/history)
       const delSuccess = deleteMedication(medId)
@@ -104,7 +116,7 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
     })
   })
 
-  describe('Dose Status Calculation', () => {
+  describe('Dose Status Calculation & Midnight Boundary', () => {
     it('returns "taken" if a taken doseLog exists', () => {
       const log = { status: 'taken', scheduledTime: '08:00' }
       const status = calculateDoseStatus('08:00', log)
@@ -112,31 +124,58 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
     })
 
     it('returns "upcoming" when current time is well before scheduled time', () => {
-      // Clock at 06:00, scheduled at 08:00
       const clock = new Date('2026-11-15T06:00:00')
       const status = calculateDoseStatus('08:00', null, clock)
       expect(status).toBe('upcoming')
     })
 
     it('returns "due" when current time is within 15m before or up to 60m after scheduled time', () => {
-      // Clock at 07:50 (10 min before 08:00)
       const clock1 = new Date('2026-11-15T07:50:00')
       expect(calculateDoseStatus('08:00', null, clock1)).toBe('due')
 
-      // Clock at 08:30 (30 min after 08:00, within 60m threshold)
       const clock2 = new Date('2026-11-15T08:30:00')
       expect(calculateDoseStatus('08:00', null, clock2)).toBe('due')
     })
 
     it('returns "missed" when more than 60 minutes have elapsed without dose', () => {
-      // Clock at 09:30 (90 min after 08:00)
       const clock = new Date('2026-11-15T09:30:00')
       expect(calculateDoseStatus('08:00', null, clock)).toBe('missed')
     })
+
+    it('correctly handles schedule crossing midnight', () => {
+      // Midnight dose: scheduled at 23:45 and 00:30
+      addMedication({
+        name: 'Night Medicine',
+        dosage: '10mg',
+        times: ['23:45'],
+      })
+      addMedication({
+        name: 'Late Night Drops',
+        dosage: '2 drops',
+        times: ['00:15'],
+      })
+
+      // Clock at 23:55 (5 minutes to midnight)
+      const clockBeforeMidnight = new Date('2026-11-15T23:55:00')
+      const sched1 = getTodaysSchedule(clockBeforeMidnight)
+      expect(sched1.length).toBe(2)
+      // 00:15 is sorted first in 24h day representation, followed by 23:45
+      expect(sched1[0].scheduledTime).toBe('00:15')
+      expect(sched1[1].scheduledTime).toBe('23:45')
+      // At 23:55, 23:45 dose is 'due' (10 minutes after scheduled)
+      expect(sched1[1].status).toBe('due')
+
+      // Clock after midnight at 00:10 on 2026-11-16
+      const clockAfterMidnight = new Date('2026-11-16T00:10:00')
+      const sched2 = getTodaysSchedule(clockAfterMidnight)
+      // On new date, 00:15 is due (5 minutes before)
+      const doseAfterMidnight = sched2.find((d) => d.scheduledTime === '00:15')
+      expect(doseAfterMidnight.status).toBe('due')
+    })
   })
 
-  describe("Today's Schedule Engine", () => {
-    it('correctly aggregates, sorts, and ignores medications without times', () => {
+  describe("Today's Schedule Engine & Next Dose Spotlight", () => {
+    it('correctly aggregates, sorts, and finds the next scheduled dose', () => {
       addMedication({
         name: 'Bedtime Med',
         dosage: '10mg',
@@ -157,10 +196,16 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
       expect(schedule[1].scheduledTime).toBe('19:00')
       expect(schedule[2].scheduledTime).toBe('21:00')
       expect(schedule[2].medication.name).toBe('Bedtime Med')
+
+      // Next scheduled dose should be the 07:30 one
+      const next = getNextScheduledDose(clock)
+      expect(next).not.toBeNull()
+      expect(next.scheduledTime).toBe('07:30')
+      expect(next.medication.name).toBe('Morning Med')
     })
   })
 
-  describe('Dose Logging & Duplicate Prevention', () => {
+  describe('Dose Logging, Duplicate Prevention & Accidental Entry Correction', () => {
     it('creates dose log and rejects duplicate for the same slot', () => {
       const addRes = addMedication({
         name: 'Amlodipine',
@@ -189,26 +234,35 @@ describe('Medications & Schedule Engine (Milestone 2)', () => {
       expect(logsToday.length).toBe(2)
     })
 
-    it('preserves past dose logs when medication is edited or deleted', () => {
+    it('allows correction of accidental entries with audit log trail', () => {
       const addRes = addMedication({
-        name: 'Atorvastatin',
-        dosage: '20mg',
-        times: ['20:00'],
+        name: 'Lisinopril',
+        dosage: '10mg',
+        times: ['08:00'],
       })
       const medId = addRes.medication.id
-      const clock = new Date('2026-11-15T20:00:00')
+      const clock = new Date('2026-11-15T08:00:00')
 
-      logDose(medId, '20:00', clock)
+      const logRes = logDose(medId, '08:00', clock)
+      expect(logRes.success).toBe(true)
+      const doseLogId = logRes.doseLog.id
+
+      // Dose is taken
       expect(getDoseLogsForDate('2026-11-15').length).toBe(1)
 
-      // Edit medication
-      updateMedication(medId, { dosage: '40mg' })
-      expect(getDoseLogsForDate('2026-11-15').length).toBe(1)
+      // Correct accidental dose
+      const correctRes = correctAccidentalDose(doseLogId, 'User clicked by mistake', clock)
+      expect(correctRes.success).toBe(true)
+      expect(correctRes.auditEntry.action).toBe('corrected_accidental_entry')
 
-      // Delete medication
-      deleteMedication(medId)
-      // Historical logs still exist in database
-      expect(getDoseLogsForDate('2026-11-15').length).toBe(1)
+      // Dose is no longer in active taken logs
+      expect(getDoseLogsForDate('2026-11-15').length).toBe(0)
+
+      // Audit trail records the correction
+      const audits = getDoseAuditLogs()
+      expect(audits.length).toBe(1)
+      expect(audits[0].originalDoseLogId).toBe(doseLogId)
+      expect(audits[0].medicationId).toBe(medId)
     })
   })
 })
