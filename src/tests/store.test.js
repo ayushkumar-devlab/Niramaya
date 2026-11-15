@@ -32,6 +32,7 @@ describe('store.js (LocalStorage wrapper)', () => {
       language: 'en',
       seniorMode: false,
       fontSize: 'normal',
+      guideDismissed: false,
     })
     expect(getStore(KEYS.PROFILE)).toEqual({
       name: '',

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { t, setLocale, getLocale, initLocale, locales } from '../i18n/index.js'
+import { t, setLanguage, setLocale, getLocale, initLocale, locales } from '../i18n/index.js'
 
 function flattenKeys(value, prefix = '') {
   return Object.entries(value).flatMap(([key, child]) => {
@@ -39,7 +39,7 @@ describe('i18n engine', () => {
   })
 
   it('switches to Hindi and returns translated text', () => {
-    setLocale('hi')
+    setLanguage('hi')
     expect(getLocale()).toBe('hi')
     expect(t('app.name')).toBe('निरामय')
     expect(t('nav.senior')).toBe('सीनियर मोड')
@@ -52,6 +52,16 @@ describe('i18n engine', () => {
     expect(t('app.name')).toBe('ನಿರಾಮಯ')
     expect(t('nav.senior')).toBe('ಹಿರಿಯರ ಮೋಡ್')
     expect(t('common.save')).toBe('ಉಳಿಸಿ')
+  })
+
+  it('dispatches a language change event immediately for the app shell to rerender', () => {
+    let eventDetail = null
+    document.dispatchEvent = (event) => {
+      eventDetail = event.detail
+    }
+    setLanguage('hi')
+    expect(getLocale()).toBe('hi')
+    expect(eventDetail).toEqual({ lang: 'hi' })
   })
 
   it('falls back to English when a key or language is missing', () => {

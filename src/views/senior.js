@@ -111,6 +111,22 @@ export function renderSenior(container) {
           </button>
         </div>
       </div>
+      <section class="dashboard-hero card" aria-labelledby="dashboard-greeting">
+        <div>
+          <p id="dashboard-greeting" class="dashboard-greeting"></p>
+          <p id="dashboard-progress" class="dashboard-progress"></p>
+        </div>
+        <div id="dashboard-progress-bar" class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="${t('senior.progress', { taken: 0, total: 0 })}"><span></span></div>
+      </section>
+      <section class="quick-actions" aria-labelledby="quick-actions-heading">
+        <h2 id="quick-actions-heading">${t('senior.quickActions')}</h2>
+        <div class="quick-action-grid">
+          <button class="quick-action card" id="quick-add-med" type="button"><span class="quick-action-icon" aria-hidden="true">＋</span><span>${t('senior.addMed')}</span></button>
+          <a class="quick-action card" href="#/dose-decision"><span class="quick-action-icon" aria-hidden="true">◷</span><span>${t('senior.quickMissedDose')}</span></a>
+          <a class="quick-action card" href="#/emergency"><span class="quick-action-icon" aria-hidden="true">♡</span><span>${t('senior.quickEmergency')}</span></a>
+          <a class="quick-action card" href="#/safety"><span class="quick-action-icon" aria-hidden="true">✓</span><span>${t('senior.quickSafety')}</span></a>
+        </div>
+      </section>
       <section id="senior-safety-summary" class="card safety-dashboard-summary mt-4" aria-labelledby="senior-safety-summary-heading"></section>
 
       <!-- Next Scheduled Medicine Spotlight -->
@@ -121,6 +137,7 @@ export function renderSenior(container) {
       <!-- Schedule Content Area -->
       <section id="senior-schedule-list" class="senior-schedule" aria-label="${t('senior.todaySchedule')}">
       </section>
+      <p class="guide-prompt"><a href="#/how-to-use">${t('senior.howToUseLink')}</a></p>
     </div>
   `
 
@@ -135,6 +152,11 @@ export function renderSenior(container) {
 
   const subtitleEl = container.querySelector('#senior-subtitle-text')
   if (subtitleEl) subtitleEl.textContent = t('senior.subtitle')
+
+  const hour = new Date().getHours()
+  const greetingKey = hour < 12 ? 'greetingMorning' : hour < 17 ? 'greetingAfternoon' : 'greetingEvening'
+  const greetingEl = container.querySelector('#dashboard-greeting')
+  if (greetingEl) greetingEl.textContent = t(`senior.${greetingKey}`)
 
   const liveRegion = container.querySelector('#senior-live-region')
   const safetySummary = container.querySelector('#senior-safety-summary')
@@ -182,6 +204,18 @@ export function renderSenior(container) {
     if (nextDoseSection) nextDoseSection.innerHTML = ''
 
     const schedule = getTodaysSchedule()
+    const taken = schedule.filter((item) => item.status === 'taken').length
+    const progress = schedule.length ? Math.round((taken / schedule.length) * 100) : 0
+    const progressText = t('senior.progress', { taken, total: schedule.length })
+    const progressEl = container.querySelector('#dashboard-progress')
+    const progressBar = container.querySelector('#dashboard-progress-bar')
+    if (progressEl) progressEl.textContent = progressText
+    if (progressBar) {
+      progressBar.setAttribute('aria-valuenow', String(progress))
+      progressBar.setAttribute('aria-label', progressText)
+      const fill = progressBar.querySelector('span')
+      if (fill) fill.style.width = `${progress}%`
+    }
 
     if (schedule.length === 0) {
       const emptyCard = document.createElement('div')
@@ -210,6 +244,11 @@ export function renderSenior(container) {
       emptyCard.appendChild(emptyTitle)
       emptyCard.appendChild(emptySub)
       emptyCard.appendChild(emptyAddBtn)
+      const guideLink = document.createElement('a')
+      guideLink.className = 'empty-guide-link'
+      guideLink.href = '#/how-to-use'
+      guideLink.textContent = t('senior.howToUseLink')
+      emptyCard.appendChild(guideLink)
       scheduleListEl.appendChild(emptyCard)
       return
     }
@@ -262,6 +301,7 @@ export function renderSenior(container) {
   if (btnAddMed) {
     btnAddMed.addEventListener('click', () => openMedicationModal(null, refreshSchedule))
   }
+  container.querySelector('#quick-add-med')?.addEventListener('click', () => openMedicationModal(null, refreshSchedule))
 
   const btnReadSchedule = container.querySelector('#btn-read-schedule')
   if (btnReadSchedule) {

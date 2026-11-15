@@ -1,11 +1,13 @@
-const CACHE_NAME = 'niramaya-v5'
+const CACHE_NAME = 'niramaya-v6'
 const OFFLINE_URL = '/'
 
 // Assets to pre-cache on install
 const PRECACHE_URLS = [
   '/manifest.json',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
+  '/logo.svg',
+  '/logo-192.png',
+  '/logo-512.png',
+  '/favicon.svg',
 ]
 
 self.addEventListener('install', (event) => {

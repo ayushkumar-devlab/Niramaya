@@ -36,7 +36,7 @@ function applyLocale() {
   document.dispatchEvent(new CustomEvent('localechange', { detail: { lang: currentLocale } }))
 }
 
-export function setLocale(lang) {
+export function setLanguage(lang) {
   currentLocale = SUPPORTED_LOCALES.includes(lang) ? lang : 'en'
   const settings = getStore(KEYS.SETTINGS) || {}
   const profile = getStore(KEYS.PROFILE) || {}
@@ -44,6 +44,8 @@ export function setLocale(lang) {
   setStore(KEYS.PROFILE, { ...profile, language: currentLocale })
   applyLocale()
 }
+
+export const setLocale = setLanguage
 
 export function getLocale() { return currentLocale }
 export function getLocaleCode() { return LOCALE_CODES[currentLocale] }

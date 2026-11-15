@@ -39,6 +39,7 @@ const DEFAULTS = {
     language: 'en',
     seniorMode: false,
     fontSize: 'normal',
+    guideDismissed: false,
   },
   [KEYS.CAREGIVER_NOTES]: [],
   [KEYS.DOSE_AUDIT_LOGS]: [],

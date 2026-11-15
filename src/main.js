@@ -1,10 +1,27 @@
 import './style.css'
 import { router } from './modules/router.js'
 import { initStore, getStore, setStore, KEYS } from './modules/store.js'
-import { t, setLocale, getLocale, initLocale } from './i18n/index.js'
+import { t, setLanguage, getLocale, initLocale } from './i18n/index.js'
+import { renderHowToUse } from './views/howToUse.js'
+import { showModal } from './components/modal.js'
 
 // ─── View placeholders (dynamic imports with fallback) ───────────────────────
 let renderSenior, renderCaregiver, renderEmergency, renderDoseDecision, renderSafetyChecker, renderSettings
+let isOnline = typeof navigator === 'undefined' ? true : navigator.onLine
+
+function iconSvg(name) {
+  const paths = {
+    senior: '<path d="M5 10h14M7 6h10M7 14h10M9 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    dose: '<path d="M12 5a7 7 0 1 0 7 7M12 8v4l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    caregiver: '<circle cx="12" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.5-4 2.8-6 7-6s6.5 2 7 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    emergency: '<path d="M12 3 4 7v5c0 4.5 3.2 7.5 8 9 4.8-1.5 8-4.5 8-9V7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    safety: '<path d="M12 3 19 6v5c0 4-2.5 7-7 9-4.5-2-7-5-7-9V6z" fill="none" stroke="currentColor" stroke-width="2"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5v2m0 12v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M3 12h2m14 0h2M4.9 19.1l1.4-1.4M18 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    guide: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h7M8 12h7M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    globe: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16M12 4c2 2.2 3 4.8 3 8s-1 5.8-3 8c-2-2.2-3-4.8-3-8s1-5.8 3-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+  }
+  return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.guide}</svg>`
+}
 
 function placeholderView(title) {
   return (container) => {
@@ -27,23 +44,16 @@ function buildAppShell() {
 <a class="skip-link" href="#app-main">${t('a11y.skipToMain')}</a>
 <header id="app-header" role="banner">
   <div class="header-inner">
-    <div class="header-brand">
-      <svg class="brand-icon" width="32" height="32" viewBox="0 0 192 192" aria-hidden="true">
-        <rect width="192" height="192" rx="32" fill="#1a2b4a"/>
-        <text x="96" y="136" font-family="system-ui" font-weight="700" font-size="110" text-anchor="middle" fill="#ffffff">N</text>
-        <line x1="32" y1="168" x2="160" y2="168" stroke="#0d9488" stroke-width="6" stroke-linecap="round"/>
-      </svg>
+    <a class="header-brand" href="#/senior" aria-label="${t('a11y.logo')}">
+      <img class="brand-icon" src="/logo.svg" alt="" width="40" height="40">
       <span class="brand-name">Niramaya</span>
-    </div>
+    </a>
     <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
-      <a href="#/senior" class="nav-link" data-route="senior">${t('nav.senior')}</a>
-      <a href="#/dose-decision" class="nav-link" data-route="dose-decision">${t('nav.doseDecision')}</a>
-      <a href="#/caregiver" class="nav-link" data-route="caregiver">${t('nav.caregiver')}</a>
-      <a href="#/emergency" class="nav-link" data-route="emergency">${t('nav.emergency')}</a>
-      <a href="#/safety" class="nav-link" data-route="safety">${t('nav.safety')}</a>
-      <a href="#/settings" class="nav-link" data-route="settings">${t('nav.settings')}</a>
+      ${[['senior','senior'],['dose-decision','dose'],['caregiver','caregiver'],['emergency','emergency'],['safety','safety'],['how-to-use','guide'],['settings','settings']].map(([route, icon]) => `<a href="#/${route}" class="nav-link" data-route="${route}">${iconSvg(icon)}<span>${t(`nav.${route === 'dose-decision' ? 'doseDecision' : route === 'how-to-use' ? 'howToUse' : route}`)}</span></a>`).join('')}
     </nav>
-    <label class="language-selector">
+    <div class="header-tools">
+    <span id="online-status" class="status-chip" role="status">${iconSvg('globe')}<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span></span>
+    <label class="language-selector">${iconSvg('globe')}
       <span class="sr-only">${t('settings.language')}</span>
       <select id="language-selector" aria-label="${t('settings.language')}">
         <option value="en" lang="en">English</option>
@@ -54,6 +64,7 @@ function buildAppShell() {
     <button id="senior-mode-toggle" class="btn-ghost senior-toggle" aria-pressed="false" aria-label="${t('a11y.toggleSeniorMode')}">
       <span class="toggle-icon">👴</span>
     </button>
+    </div>
   </div>
 </header>
 
@@ -63,28 +74,29 @@ function buildAppShell() {
 
 <nav id="app-nav" aria-label="${t('a11y.bottomNavigation')}" role="navigation">
   <a href="#/senior" class="tab-item" data-route="senior" aria-label="${t('nav.senior')}">
-    <span class="tab-icon">💊</span><span class="tab-label">${t('nav.senior')}</span>
+    ${iconSvg('senior')}<span class="tab-label">${t('nav.senior')}</span>
   </a>
   <a href="#/dose-decision" class="tab-item" data-route="dose-decision" aria-label="${t('nav.doseDecision')}">
-    <span class="tab-icon">❓</span><span class="tab-label">${t('nav.doseDecision')}</span>
+    ${iconSvg('dose')}<span class="tab-label">${t('nav.doseDecision')}</span>
   </a>
   <a href="#/caregiver" class="tab-item" data-route="caregiver" aria-label="${t('nav.caregiver')}">
-    <span class="tab-icon">🩺</span><span class="tab-label">${t('nav.caregiver')}</span>
+    ${iconSvg('caregiver')}<span class="tab-label">${t('nav.caregiver')}</span>
   </a>
   <a href="#/emergency" class="tab-item" data-route="emergency" aria-label="${t('nav.emergency')}">
-    <span class="tab-icon">🚨</span><span class="tab-label">${t('nav.emergency')}</span>
+    ${iconSvg('emergency')}<span class="tab-label">${t('nav.emergency')}</span>
   </a>
   <a href="#/safety" class="tab-item" data-route="safety" aria-label="${t('nav.safety')}">
-    <span class="tab-icon">🛡️</span><span class="tab-label">${t('nav.safety')}</span>
+    ${iconSvg('safety')}<span class="tab-label">${t('nav.safety')}</span>
   </a>
   <a href="#/settings" class="tab-item" data-route="settings" aria-label="${t('nav.settings')}">
-    <span class="tab-icon">⚙️</span><span class="tab-label">${t('nav.settings')}</span>
+    ${iconSvg('settings')}<span class="tab-label">${t('nav.settings')}</span>
   </a>
 </nav>
 
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 <div id="locale-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 <div id="modal-container"></div>
+<footer class="app-footer"><span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a></footer>
 `
 }
 
@@ -107,13 +119,19 @@ function applyLocale() {
 
   // Update desktop nav text
   document.querySelectorAll('#app-desktop-nav .nav-link[data-route]').forEach(el => {
-    el.textContent = t(`nav.${el.dataset.route}`)
+    const key = el.dataset.route === 'dose-decision' ? 'doseDecision' : el.dataset.route === 'how-to-use' ? 'howToUse' : el.dataset.route
+    const label = el.querySelector('span:not(.ui-icon)')
+    if (label) label.textContent = t(`nav.${key}`)
   })
 
   // Update bottom nav labels
   document.querySelectorAll('#app-nav .tab-item .tab-label').forEach(el => {
     const route = el.closest('[data-route]')?.dataset.route
-    if (route) el.textContent = t(`nav.${route}`)
+    if (route) {
+      const key = route === 'dose-decision' ? 'doseDecision' : route
+      el.textContent = t(`nav.${key}`)
+      el.closest('[data-route]')?.setAttribute('aria-label', t(`nav.${key}`))
+    }
   })
   const selector = document.getElementById('language-selector')
   if (selector) {
@@ -122,6 +140,10 @@ function applyLocale() {
   }
   const seniorToggle = document.getElementById('senior-mode-toggle')
   if (seniorToggle) seniorToggle.setAttribute('aria-label', t('a11y.toggleSeniorMode'))
+  const status = document.querySelector('#online-status span:last-child')
+  if (status) status.textContent = isOnline ? t('a11y.online') : t('a11y.offline')
+  const footer = document.querySelector('.app-footer')
+  if (footer) footer.innerHTML = `<span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a>`
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -168,6 +190,7 @@ async function init() {
   router.register('/dose-decision', () => renderDoseDecision(document.getElementById('app-main')))
   router.register('/safety', () => renderSafetyChecker(document.getElementById('app-main')))
   router.register('/settings', () => renderSettings(document.getElementById('app-main')))
+  router.register('/how-to-use', () => renderHowToUse(document.getElementById('app-main')))
 
   // 6. Start router (navigates to current hash or default)
   router.init()
@@ -197,7 +220,7 @@ async function init() {
 
   const languageSelector = document.getElementById('language-selector')
   if (languageSelector) {
-    languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
+    languageSelector.addEventListener('change', (event) => setLanguage(event.target.value))
   }
 
   // 9. Register Service Worker with root scope
@@ -208,7 +231,7 @@ async function init() {
   }
 
   // 10. Locale change listener
-  window.addEventListener('localechange', () => {
+  document.addEventListener('localechange', () => {
     applySettings()
     applyLocale()
     router.rerender()
@@ -219,6 +242,32 @@ async function init() {
     const route = window.location.hash.replace(/^#\//, '') || 'senior'
     updateNavActiveState(route)
   })
+
+  const updateOnlineStatus = () => {
+    isOnline = navigator.onLine
+    const status = document.querySelector('#online-status')
+    if (status) status.innerHTML = `${iconSvg('globe')}<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span>`
+  }
+  window.addEventListener('online', updateOnlineStatus)
+  window.addEventListener('offline', updateOnlineStatus)
+
+  if (!(getStore(KEYS.SETTINGS) || {}).guideDismissed) {
+    showModal({
+      title: t('guide.welcomeTitle'),
+      content: `<p>${t('guide.welcomeBody')}</p>`,
+      confirmText: t('guide.openGuide'),
+      cancelText: t('guide.notNow'),
+      onConfirm: () => {
+        const settings = getStore(KEYS.SETTINGS) || {}
+        setStore(KEYS.SETTINGS, { ...settings, guideDismissed: true })
+        window.location.hash = '#/how-to-use'
+      },
+      onCancel: () => {
+        const settings = getStore(KEYS.SETTINGS) || {}
+        setStore(KEYS.SETTINGS, { ...settings, guideDismissed: true })
+      },
+    })
+  }
 }
 
 init().catch(console.error)

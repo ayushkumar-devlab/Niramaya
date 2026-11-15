@@ -39,6 +39,7 @@ export function renderEmergency(container) {
     <div class="view-container emergency-container" role="region" aria-labelledby="emergency-card-title">
       <!-- High-Contrast Emergency Banner Header -->
       <header class="emergency-hero-banner" role="banner">
+        <div class="emergency-print-brand"><img src="/logo.svg" alt="${t('a11y.logo')}"><strong>Niramaya</strong></div>
         <div class="emergency-badge-lead">
           <span class="emergency-pulse-icon" aria-hidden="true">🚨</span>
           <span>${t('emergency.badgeTitle')}</span>
