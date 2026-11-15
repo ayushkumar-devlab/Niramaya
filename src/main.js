@@ -36,6 +36,7 @@ function buildAppShell() {
     </div>
     <nav id="app-desktop-nav" aria-label="Main navigation">
       <a href="#/senior" class="nav-link" data-route="senior">${t('nav.senior')}</a>
+      <a href="#/dose-decision" class="nav-link" data-route="dose-decision">${t('nav.doseDecision')}</a>
       <a href="#/caregiver" class="nav-link" data-route="caregiver">${t('nav.caregiver')}</a>
       <a href="#/emergency" class="nav-link" data-route="emergency">${t('nav.emergency')}</a>
       <a href="#/safety" class="nav-link" data-route="safety">${t('nav.safety')}</a>
@@ -54,6 +55,9 @@ function buildAppShell() {
 <nav id="app-nav" aria-label="Bottom navigation" role="navigation">
   <a href="#/senior" class="tab-item" data-route="senior" aria-label="Senior Mode">
     <span class="tab-icon">💊</span><span class="tab-label">${t('nav.senior')}</span>
+  </a>
+  <a href="#/dose-decision" class="tab-item" data-route="dose-decision" aria-label="Missed Dose">
+    <span class="tab-icon">❓</span><span class="tab-label">${t('nav.doseDecision')}</span>
   </a>
   <a href="#/caregiver" class="tab-item" data-route="caregiver" aria-label="Caregiver">
     <span class="tab-icon">🩺</span><span class="tab-label">${t('nav.caregiver')}</span>

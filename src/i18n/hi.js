@@ -1,6 +1,7 @@
 export const hi = {
   nav: {
     senior: 'सीनियर मोड',
+    doseDecision: 'छूटी खुराक सहायता',
     caregiver: 'देखभालकर्ता',
     emergency: 'आपातकाल',
     safety: 'सुरक्षा जांच',
@@ -49,6 +50,7 @@ export const hi = {
     deleteConfirmTitle: 'दवा हटाएं?',
     deleteConfirmBody: 'यह {medName} की भविष्य की खुराकों को हटा देगा। पिछला इतिहास सुरक्षित रहेगा।',
     timeCount: 'आज {count} खुराकें',
+    missedDoseAction: 'छूटी खुराक गाइड',
   },
 
   med: {
@@ -65,8 +67,11 @@ export const hi = {
     timeAdd: '+ समय जोड़ें',
     instructions: 'निर्देश',
     instructionsPlaceholder: 'जैसे भोजन के बाद, सुबह नाश्ते के बाद',
-    clinicianInstructions: 'डॉक्टर के नोट्स',
-    clinicianInstructionsPlaceholder: 'चिकित्सक द्वारा दिए गए निर्देश',
+    clinicianInstructions: 'डॉक्टर के छूटी खुराक निर्देश',
+    clinicianInstructionsPlaceholder: 'छूटी खुराक के लिए डॉक्टर द्वारा दिए गए सटीक निर्देश',
+    instructionSource: 'डॉक्टर / क्लिनिक का नाम',
+    instructionSourcePlaceholder: 'जैसे डॉ. रमेश या अपोलो क्लिनिक',
+    verificationDate: 'सत्यापन तिथि',
     addTitle: 'दवा जोड़ें',
     editTitle: 'दवा संपादित करें',
     saveBtn: 'दवा सहेजें',
@@ -98,10 +103,16 @@ export const hi = {
   },
 
   dose: {
-    title: 'खुराक की जानकारी',
+    title: 'डोज़-डिसीजन सहायक (DoseDecision)',
+    subtitle: 'डॉक्टर के सत्यापित निर्देशों के आधार पर समझ में आने वाली छूटी-खुराक सहायता।',
+    selectMed: 'कौन सी दवा छूट गई?',
+    scheduledTime: 'दवा का निर्धारित समय क्या था?',
+    rememberedTime: 'आपको कब याद आया?',
+    hasRecordedNext: 'क्या इसके बाद वाली अगली खुराक ले ली गई है?',
+    checkDecision: 'छूटी खुराक की समीक्षा करें',
     noClinician: 'फ़ाइल पर कोई डॉक्टर निर्देश नहीं है।',
     contactDoctor: 'अपने डॉक्टर से संपर्क करें',
-    disclaimer: 'यह जानकारी केवल संदर्भ के लिए है। हमेशा अपने चिकित्सक की सलाह का पालन करें।',
+    disclaimer: 'निरामय केवल रिकॉर्ड किए गए डॉक्टर के नोट्स प्रदर्शित करता है और कोई चिकित्सीय सलाह नहीं बनाता है।',
     covered: 'खुराक दर्ज की गई',
     partial: 'आंशिक खुराक ली गई',
     missing: 'खुराक दर्ज नहीं की गई',

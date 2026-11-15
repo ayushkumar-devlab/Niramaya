@@ -1,6 +1,7 @@
 export const kn = {
   nav: {
     senior: 'ಹಿರಿಯರ ಮೋಡ್',
+    doseDecision: 'ತಪ್ಪಿದ ಪ್ರಮಾಣ ಸಹಾಯಕ',
     caregiver: 'ಆರೈಕೆದಾರ',
     emergency: 'ತುರ್ತು',
     safety: 'ಸುರಕ್ಷತೆ ಪರೀಕ್ಷೆ',
@@ -49,6 +50,7 @@ export const kn = {
     deleteConfirmTitle: 'ಔಷಧಿಯನ್ನು ತೆಗೆದುಹಾಕಬೇಕೆ?',
     deleteConfirmBody: 'ಇದು {medName} ನ ಭವಿಷ್ಯದ ಪ್ರಮಾಣಗಳನ್ನು ತೆಗೆದುಹಾಕುತ್ತದೆ. ಹಿಂದಿನ ಇತಿಹಾಸ ಸುರಕ್ಷಿತವಾಗಿರುತ್ತದೆ.',
     timeCount: 'ಇಂದು {count} ಪ್ರಮಾಣಗಳು',
+    missedDoseAction: 'ತಪ್ಪಿದ ಪ್ರಮಾಣ ನೆರವು',
   },
 
   med: {
@@ -65,8 +67,11 @@ export const kn = {
     timeAdd: '+ ಸಮಯ ಸೇರಿಸಿ',
     instructions: 'ಸೂಚನೆಗಳು',
     instructionsPlaceholder: 'ಉದಾ: ಊಟದ ನಂತರ, ಬೆಳಗಿನ ಉಪಹಾರದ ನಂತರ',
-    clinicianInstructions: 'ವೈದ್ಯರ ಟಿಪ್ಪಣಿಗಳು',
-    clinicianInstructionsPlaceholder: 'ವೈದ್ಯರು ನೀಡಿದ ಸೂಚನೆಗಳು',
+    clinicianInstructions: 'ವೈದ್ಯರ ತಪ್ಪಿದ ಪ್ರಮಾಣ ಟಿಪ್ಪಣಿಗಳು',
+    clinicianInstructionsPlaceholder: 'ತಪ್ಪಿದ ಪ್ರಮಾಣಗಳ ಬಗ್ಗೆ ವೈದ್ಯರು ನೀಡಿದ ನಿಖರ ಸೂಚನೆಗಳು',
+    instructionSource: 'ವೈದ್ಯರು / ಕ್ಲಿನಿಕ್ ಹೆಸರು',
+    instructionSourcePlaceholder: 'ಉದಾ: ಡಾ. ರಮೇಶ್ ಅಥವಾ ಅಪೋಲೋ ಕ್ಲಿನಿಕ್',
+    verificationDate: 'ದೃಢೀಕರಣ ದಿನಾಂಕ',
     addTitle: 'ಔಷಧಿ ಸೇರಿಸಿ',
     editTitle: 'ಔಷಧಿ ತಿದ್ದುಪಡಿ',
     saveBtn: 'ಔಷಧಿ ಉಳಿಸಿ',
@@ -98,10 +103,16 @@ export const kn = {
   },
 
   dose: {
-    title: 'ಪ್ರಮಾಣದ ಮಾಹಿತಿ',
+    title: 'ಡೋಸ್‌ಡಿಸಿಷನ್ ಸಹಾಯಕ (DoseDecision)',
+    subtitle: 'ದಾಖಲಾದ ವೈದ್ಯರ ಸೂಚನೆಗಳ ಆಧಾರದ ಮೇಲೆ ವಿವರಿಸಬಹುದಾದ ತಪ್ಪಿದ ಪ್ರಮಾಣ ಸಹಾಯಕ.',
+    selectMed: 'ಯಾವ ಔಷಧಿ ತಪ್ಪಿದೆ?',
+    scheduledTime: 'ಅದರ ನಿಗದಿತ ಸಮಯವೇನು?',
+    rememberedTime: 'ನಿಮಗೆ ಯಾವಾಗ ನೆನಪಾಯಿತು?',
+    hasRecordedNext: 'ಮುಂದಿನ ಪ್ರಮಾಣವನ್ನು ಈಗಾಗಲೇ ತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆಯೇ?',
+    checkDecision: 'ತಪ್ಪಿದ ಪ್ರಮಾಣ ಸೂಚನೆ ಪರಿಶೀಲಿಸಿ',
     noClinician: 'ಯಾವುದೇ ವೈದ್ಯರ ಸೂಚನೆಗಳು ಲಭ್ಯವಿಲ್ಲ.',
     contactDoctor: 'ನಿಮ್ಮ ವೈದ್ಯರನ್ನು ಸಂಪರ್ಕಿಸಿ',
-    disclaimer: 'ಈ ಮಾಹಿತಿಯು ಕೇವಲ ಮಾಹಿತಿಗಾಗಿ ಮಾತ್ರ. ಯಾವಾಗಲೂ ನಿಮ್ಮ ವೈದ್ಯರ ಸಲಹೆಯನ್ನು ಪಾಲಿಸಿ.',
+    disclaimer: 'ನಿರಾಮಯ ದಾಖಲಾದ ವೈದ್ಯರ ಟಿಪ್ಪಣಿಗಳನ್ನು ಮಾತ್ರ ತೋರಿಸುತ್ತದೆ ಮತ್ತು ಯಾವುದೇ ವೈದ್ಯಕೀಯ ಸಲಹೆಯನ್ನು ಸೃಷ್ಟಿಸುವುದಿಲ್ಲ.',
     covered: 'ಪ್ರಮಾಣ ದಾಖಲಾಗಿದೆ',
     partial: 'ಭಾಗಶಃ ಪ್ರಮಾಣ ತೆಗೆದುಕೊಳ್ಳಲಾಗಿದೆ',
     missing: 'ಪ್ರಮಾಣ ದಾಖಲಾಗಿಲ್ಲ',

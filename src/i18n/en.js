@@ -1,6 +1,7 @@
 export const en = {
   nav: {
     senior: 'Senior Mode',
+    doseDecision: 'Missed Dose',
     caregiver: 'Caregiver',
     emergency: 'Emergency',
     safety: 'Safety Check',
@@ -49,6 +50,7 @@ export const en = {
     deleteConfirmTitle: 'Delete Medication?',
     deleteConfirmBody: 'This will remove future scheduled doses for {medName}. Past history will be saved.',
     timeCount: '{count} doses today',
+    missedDoseAction: 'Missed Dose Help',
   },
 
   med: {
@@ -65,8 +67,11 @@ export const en = {
     timeAdd: '+ Add Time',
     instructions: 'Instructions',
     instructionsPlaceholder: 'e.g. Take with food, after breakfast',
-    clinicianInstructions: 'Clinician Notes',
-    clinicianInstructionsPlaceholder: 'Clinician-provided instructions (e.g. Do not crush, check BP weekly)',
+    clinicianInstructions: 'Clinician Missed-Dose Notes',
+    clinicianInstructionsPlaceholder: 'Exact clinician-provided instructions for missed doses',
+    instructionSource: 'Clinician / Source Name',
+    instructionSourcePlaceholder: 'e.g. Dr. Ramesh (Cardiologist) or Apollo Clinic',
+    verificationDate: 'Verification Date',
     addTitle: 'Add Medication',
     editTitle: 'Edit Medication',
     saveBtn: 'Save Medication',
@@ -98,10 +103,16 @@ export const en = {
   },
 
   dose: {
-    title: 'Dose Information',
+    title: 'DoseDecision Assistant',
+    subtitle: 'Explainable, context-aware missed-dose assistance based strictly on verified clinician instructions.',
+    selectMed: 'Which medicine was missed?',
+    scheduledTime: 'What was its scheduled time?',
+    rememberedTime: 'When did you remember?',
+    hasRecordedNext: 'Has the next subsequent dose already been taken?',
+    checkDecision: 'Evaluate Missed Dose Guidance',
     noClinician: 'No clinician instructions on file.',
     contactDoctor: 'Contact your doctor',
-    disclaimer: "This information is for reference only. Always follow your doctor's advice.",
+    disclaimer: "Niramaya displays recorded clinician notes only and never generates or infers medical advice.",
     covered: 'Dose covered',
     partial: 'Partial dose taken',
     missing: 'Dose not recorded',

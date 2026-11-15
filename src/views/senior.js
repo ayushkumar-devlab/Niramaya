@@ -383,6 +383,16 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   })
   footerRow.appendChild(btnDelete)
 
+  // DoseDecision Link for Missed/Due doses
+  if (!isTaken) {
+    const btnMissedHelp = document.createElement('a')
+    btnMissedHelp.className = 'btn btn-ghost btn-missed-help'
+    btnMissedHelp.href = `#/dose-decision?medId=${encodeURIComponent(medication.id)}&time=${encodeURIComponent(scheduledTime)}`
+    btnMissedHelp.setAttribute('aria-label', `${t('senior.missedDoseAction')} for ${medication.name}`)
+    btnMissedHelp.innerHTML = `<span aria-hidden="true">❓</span> <span>${t('senior.missedDoseAction')}</span>`
+    footerRow.appendChild(btnMissedHelp)
+  }
+
   // Primary Action: Mark as Taken Button or Undo Taken with Audit Trail
   if (isTaken) {
     const takenContainer = document.createElement('div')
@@ -607,6 +617,30 @@ function openMedicationModal(medToEdit = null, onSaved) {
         >${isEdit ? escapeHtml(medToEdit.clinicianInstructions || '') : ''}</textarea>
       </div>
 
+      <div class="form-group mb-4">
+        <label for="form-med-source" class="form-label">${t('med.instructionSource')}</label>
+        <input
+          id="form-med-source"
+          name="instructionSource"
+          type="text"
+          class="form-input"
+          maxlength="100"
+          placeholder="${t('med.instructionSourcePlaceholder')}"
+          value="${isEdit ? escapeHtml(medToEdit.instructionSource || '') : ''}"
+        />
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="form-med-date" class="form-label">${t('med.verificationDate')}</label>
+        <input
+          id="form-med-date"
+          name="verificationDate"
+          type="date"
+          class="form-input"
+          value="${isEdit ? escapeHtml(medToEdit.verificationDate || '') : ''}"
+        />
+      </div>
+
       <p id="form-general-error" class="form-error text-danger mb-3" style="display:none;"></p>
     </form>
   `
@@ -682,6 +716,8 @@ function openMedicationModal(medToEdit = null, onSaved) {
       const activeInput = formWrapper.querySelector('#form-med-active')
       const instInput = formWrapper.querySelector('#form-med-instructions')
       const clinInput = formWrapper.querySelector('#form-med-clinician')
+      const sourceInput = formWrapper.querySelector('#form-med-source')
+      const dateInput = formWrapper.querySelector('#form-med-date')
       const genError = formWrapper.querySelector('#form-general-error')
 
       const payload = {
@@ -692,6 +728,8 @@ function openMedicationModal(medToEdit = null, onSaved) {
         times: currentTimes,
         instructions: instInput.value,
         clinicianInstructions: clinInput.value,
+        instructionSource: sourceInput ? sourceInput.value : '',
+        verificationDate: dateInput ? dateInput.value : '',
       }
 
       let res
