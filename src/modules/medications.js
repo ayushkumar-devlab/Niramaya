@@ -2,6 +2,12 @@
 
 import { KEYS, getStore, updateStore } from './store.js'
 
+function notifyMedicationChange() {
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('medicationschange'))
+  }
+}
+
 export const MISSED_THRESHOLD_MINUTES = 60
 
 /** Standard frequency options */
@@ -179,6 +185,7 @@ export function addMedication(data) {
     return [...list, medication]
   })
 
+  notifyMedicationChange()
   return { success: true, medication }
 }
 
@@ -227,6 +234,7 @@ export function updateMedication(id, data) {
     })
   })
 
+  notifyMedicationChange()
   return { success: true, medication: updated }
 }
 
@@ -250,6 +258,7 @@ export function deleteMedication(id) {
     })
   })
 
+  if (found) notifyMedicationChange()
   return found
 }
 

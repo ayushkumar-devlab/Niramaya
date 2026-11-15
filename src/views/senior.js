@@ -11,7 +11,9 @@ import {
   correctAccidentalDose,
   FREQUENCIES,
   DEFAULT_FREQUENCY_TIMES,
+  getAllMedications,
 } from '../modules/medications.js'
+import { checkMedications, SAFETY_SEVERITIES } from '../safety/safetyChecker.js'
 import { speechService } from '../modules/speech.js'
 import { showModal } from '../components/modal.js'
 import { showToast } from '../components/toast.js'
@@ -109,6 +111,7 @@ export function renderSenior(container) {
           </button>
         </div>
       </div>
+      <section id="senior-safety-summary" class="card safety-dashboard-summary mt-4" aria-labelledby="senior-safety-summary-heading"></section>
 
       <!-- Next Scheduled Medicine Spotlight -->
       <section id="senior-next-dose-section" class="mb-4" aria-label="${t('senior.nextDoseBannerTitle')}"></section>
@@ -134,6 +137,25 @@ export function renderSenior(container) {
   if (subtitleEl) subtitleEl.textContent = t('senior.subtitle')
 
   const liveRegion = container.querySelector('#senior-live-region')
+  const safetySummary = container.querySelector('#senior-safety-summary')
+  const safetyWarnings = checkMedications(getAllMedications())
+  if (safetySummary) {
+    const urgent = safetyWarnings.filter((item) => item.severity === SAFETY_SEVERITIES.URGENT_PROFESSIONAL_REVIEW).length
+    const review = safetyWarnings.filter((item) => item.severity === SAFETY_SEVERITIES.REVIEW_RECOMMENDED).length
+    const info = safetyWarnings.filter((item) => item.severity === SAFETY_SEVERITIES.INFORMATIONAL).length
+    safetySummary.innerHTML = `
+      <div class="section-header-row">
+        <h2 id="senior-safety-summary-heading" class="section-title">${t('safety.title')}</h2>
+        <a class="btn btn-ghost btn-sm" href="#/safety">${t('safety.checkNow')}</a>
+      </div>
+      <p class="text-secondary">${safetyWarnings.length === 0 ? t('safety.empty') : t('safety.summary', { count: safetyWarnings.length })}</p>
+      <div class="safety-summary-inline">
+        <span>${t('safety.severity.urgent_professional_review')}: <strong>${urgent}</strong></span>
+        <span>${t('safety.severity.review_recommended')}: <strong>${review}</strong></span>
+        <span>${t('safety.severity.informational')}: <strong>${info}</strong></span>
+      </div>
+    `
+  }
 
   /**
    * Safe live announcement helper
@@ -753,6 +775,10 @@ function openMedicationModal(medToEdit = null, onSaved) {
       return true
     },
   })
+}
+
+export function openMedicationEditor(medication, onSaved) {
+  openMedicationModal(medication, onSaved)
 }
 
 function escapeHtml(str) {

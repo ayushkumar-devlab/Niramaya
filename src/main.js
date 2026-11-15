@@ -189,16 +189,17 @@ async function init() {
         toggleBtn.setAttribute('aria-pressed', 'true')
       }
 
-      const languageSelector = document.getElementById('language-selector')
-      if (languageSelector) {
-        languageSelector.value = getLocale()
-        languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
-      }
       // Persist to store if available
       try {
         const store = getStore()
         if (store?.settings) {
           store.settings.seniorMode = !isSenior
+        }
+
+        const languageSelector = document.getElementById('language-selector')
+        if (languageSelector) {
+          languageSelector.value = getLocale()
+          languageSelector.addEventListener('change', (event) => setLocale(event.target.value))
         }
       } catch (_) {}
     })

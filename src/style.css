@@ -201,6 +201,70 @@ p:last-child { margin-bottom: 0; }
   font: inherit;
 }
 
+.safety-summary-grid,
+.safety-summary-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.safety-count {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 12rem;
+  flex: 1 1 12rem;
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.safety-count-value { margin-left: auto; font-size: var(--text-xl); }
+.safety-warning-card { border-left: 5px solid var(--navy); }
+.safety-warning-urgent_professional_review { border-left-color: var(--danger); }
+.safety-warning-review_recommended { border-left-color: var(--warning); }
+.safety-warning-informational { border-left-color: var(--teal); }
+.safety-warning-header,
+.safety-medication-list,
+.safety-medication {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.safety-warning-header { justify-content: space-between; }
+.safety-severity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--warning-bg);
+  color: var(--navy);
+  font-weight: 700;
+}
+.safety-certainty { color: var(--text-secondary); font-weight: 600; }
+.safety-category { margin-top: var(--space-3); }
+.safety-next-step { margin-top: var(--space-3); }
+.safety-medication-list { list-style: none; margin-top: var(--space-3); }
+.safety-medication {
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+.safety-filter-label { margin-left: auto; }
+
+[data-senior="true"] .safety-warning-card,
+[data-senior="true"] .safety-dashboard-summary {
+  font-size: 1.25rem;
+}
+
+[data-senior="true"] .safety-warning-card .btn,
+[data-senior="true"] .safety-dashboard-summary .btn {
+  min-height: 60px;
+}
+
 .app-logo {
   display: flex;
   align-items: center;
