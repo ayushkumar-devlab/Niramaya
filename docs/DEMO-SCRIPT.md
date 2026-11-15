@@ -21,7 +21,7 @@ application without presenting it as medical advice.
 
 ## 1. Problem and motivation — 0:25
 
-**Click sequence:** Start on `#/senior`; show the header and today’s schedule.
+**Click sequence:** Start on `/`; show the header and today’s schedule.
 
 **Say this:** “Older adults and caregivers often need one clear place to see
 what is scheduled, what was recorded, and what still needs professional

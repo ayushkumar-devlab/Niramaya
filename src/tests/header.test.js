@@ -25,6 +25,6 @@ describe('header shell', () => {
     expect(styleSource).toMatch(/\.nav-link[^}]*flex:\s*1\s+1\s+0/)
     expect(styleSource).toMatch(/\.nav-link[^}]*white-space:\s*nowrap/)
     expect(styleSource).toMatch(/\.nav-link[^}]*min-width:\s*108px/)
-    expect([...mainSource.matchAll(/\['[^']+','[^']+'\]/g)]).toHaveLength(7)
+    expect(mainSource).toContain('Object.entries(ROUTES)')
   })
 })

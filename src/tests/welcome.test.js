@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { initStore, getStore, KEYS } from '../modules/store.js'
-import { createWelcomeStepper, hasSeenWelcome, markWelcomeSeen, shouldShowWelcome } from '../modules/welcomeState.js'
+import { hasSeenWelcome, markWelcomeSeen, shouldShowWelcome } from '../modules/welcomeState.js'
+
+const welcomeSource = readFileSync(new URL('../components/welcome.js', import.meta.url), 'utf8')
+const settingsSource = readFileSync(new URL('../views/settings.js', import.meta.url), 'utf8')
 
 describe('welcome guide state', () => {
   beforeEach(() => {
@@ -28,14 +32,25 @@ describe('welcome guide state', () => {
     expect(getStore(KEYS.WELCOME_SEEN)).toBe(false)
   })
 
-  it('moves through all six steps without changing the state logic', () => {
-    const stepper = createWelcomeStepper()
-    expect(stepper.current).toBe(1)
-    expect(stepper.next()).toBe(2)
-    expect(stepper.next()).toBe(3)
-    expect(stepper.goTo(6)).toBe(6)
-    expect(stepper.next()).toBe(6)
-    expect(stepper.back()).toBe(5)
-    expect(stepper.goTo(0)).toBe(1)
+  it('renders a single compact welcome screen with one primary action', () => {
+    expect(welcomeSource).not.toContain('welcome-progress')
+    expect(welcomeSource).not.toContain('class="btn btn-ghost welcome-back')
+    expect(welcomeSource).not.toContain('class="btn btn-ghost welcome-skip')
+    expect(welcomeSource).not.toContain('class="btn btn-secondary welcome-read')
+    expect(welcomeSource).not.toContain('createWelcomeStepper')
+    expect(welcomeSource.match(/class="btn btn-primary/g)).toHaveLength(1)
+    expect(welcomeSource).toContain("setAttribute('role', 'dialog')")
+  })
+
+  it('uses the same close path for Get started, close, and Escape', () => {
+    expect(welcomeSource).toContain("welcome-start').addEventListener('click', close)")
+    expect(welcomeSource).toContain("welcome-close').addEventListener('click', close)")
+    expect(welcomeSource).toContain("if (event.key === 'Escape')")
+    expect(welcomeSource).toContain('if (markSeenOnClose) markWelcomeSeen()')
+  })
+
+  it('keeps manual reopening non-persistent', () => {
+    expect(welcomeSource).toContain('markSeenOnClose = false')
+    expect(settingsSource).toContain("openWelcomeGuide({ markSeenOnClose: false })")
   })
 })

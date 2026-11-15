@@ -1036,10 +1036,11 @@ select.form-input {
 }
 .welcome-dialog {
   position: relative;
-  width: min(100%, 620px);
-  max-height: calc(100dvh - var(--space-8));
-  overflow-y: auto;
-  padding: var(--space-8);
+  width: min(480px, 92vw);
+  max-height: 90dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
   border-radius: var(--radius-lg);
   background: var(--white);
   box-shadow: var(--shadow-lg);
@@ -1060,37 +1061,29 @@ select.form-input {
 }
 .welcome-close:hover,
 .welcome-close:focus-visible { background: var(--surface-2); color: var(--navy); }
-.welcome-progress {
-  margin-bottom: var(--space-4);
-  color: var(--text-secondary);
-  font-weight: 700;
-  text-align: center;
-}
 .welcome-content {
-  min-height: 280px;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
   text-align: center;
 }
-.welcome-content h2 { margin: 0; color: var(--navy); }
-.welcome-content p { max-width: 52ch; margin: 0; }
-.welcome-logo { width: 56px; height: 56px; object-fit: contain; }
-.welcome-eyebrow { color: var(--teal); font-weight: 800; }
-.welcome-tagline { font-size: var(--text-lg); font-weight: 700; }
-.welcome-step-icon { width: 64px; height: 64px; color: var(--teal); }
+.welcome-content h2 { margin: 0; color: var(--navy); font-size: 1.6rem; }
+.welcome-content p { max-width: 52ch; margin: 0; font-size: 1rem; line-height: 1.4; }
+.welcome-logo { width: 48px; height: 48px; object-fit: contain; }
+.welcome-tagline { font-size: 1.05rem !important; font-weight: 700; }
 .welcome-language-options {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
+  gap: 8px;
   width: 100%;
-  margin-top: var(--space-3);
 }
 .welcome-language-button {
-  min-height: 60px;
-  padding: var(--space-3);
+  min-height: 44px;
+  padding: 8px;
   border: 2px solid var(--border);
   border-radius: var(--radius);
   background: var(--white);
@@ -1101,25 +1094,46 @@ select.form-input {
 }
 .welcome-language-button.active,
 .welcome-language-button:hover { border-color: var(--teal); background: var(--teal-bg); }
+.welcome-how-to { width: 100%; text-align: left; }
+.welcome-how-to h3 { margin: 0 0 6px; color: var(--navy); font-size: 1.05rem; }
+.welcome-item-list { display: grid; gap: 6px; list-style: none; padding: 0; margin: 0; }
+.welcome-item-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.welcome-item-icon { width: 22px; height: 22px; flex: 0 0 auto; color: var(--teal); }
+.welcome-privacy {
+  width: 100%;
+  padding-top: 4px;
+  color: var(--text-secondary);
+}
 .welcome-actions {
   display: flex;
-  flex-wrap: wrap;
   justify-content: flex-end;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-6);
+  flex-shrink: 0;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
 }
-.welcome-actions .welcome-back { margin-right: auto; }
-.welcome-actions .btn { min-height: 44px; }
-[data-senior="true"] .welcome-actions .btn,
+[data-senior="true"] .welcome-content p,
+[data-senior="true"] .welcome-item-list li { font-size: 1.25rem; }
+[data-senior="true"] .welcome-actions .btn { min-height: 60px; }
+[data-senior="true"] .welcome-language-button { min-height: 60px; }
 [data-senior="true"] .welcome-close { min-height: 60px; }
 [data-senior="true"] .welcome-close { height: 60px; width: 60px; }
-.welcome-medical-notice {
-  width: 100%;
-  padding: var(--space-3);
-  border-left: 4px solid var(--warning);
-  background: var(--warning-bg);
-  text-align: left;
+@media (max-width: 420px) {
+  .welcome-backdrop { padding: 10px; }
+  .welcome-dialog { padding: 16px; }
+  .welcome-content h2 { font-size: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-backdrop,
+  .welcome-dialog { animation: none; }
 }
 
 /* ── 17. Utility / Helper Classes ────────────────────────── */

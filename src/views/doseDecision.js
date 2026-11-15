@@ -25,8 +25,7 @@ export function renderDoseDecision(container) {
   }
 
   // Pre-selected parameters from route or state
-  const hash = window.location.hash || ''
-  const queryParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '')
+  const queryParams = new URLSearchParams(window.location.search)
   const preselectedMedId = queryParams.get('medId') || ''
   const preselectedTime = queryParams.get('time') || ''
 

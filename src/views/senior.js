@@ -122,9 +122,9 @@ export function renderSenior(container) {
         <h2 id="quick-actions-heading">${t('senior.quickActions')}</h2>
         <div class="quick-action-grid">
           <button class="quick-action card" id="quick-add-med" type="button"><span class="quick-action-icon" aria-hidden="true">＋</span><span>${t('senior.addMed')}</span></button>
-          <a class="quick-action card" href="#/dose-decision"><span class="quick-action-icon" aria-hidden="true">◷</span><span>${t('senior.quickMissedDose')}</span></a>
-          <a class="quick-action card" href="#/emergency"><span class="quick-action-icon" aria-hidden="true">♡</span><span>${t('senior.quickEmergency')}</span></a>
-          <a class="quick-action card" href="#/safety"><span class="quick-action-icon" aria-hidden="true">✓</span><span>${t('senior.quickSafety')}</span></a>
+          <a class="quick-action card" href="/missed-dose"><span class="quick-action-icon" aria-hidden="true">◷</span><span>${t('senior.quickMissedDose')}</span></a>
+          <a class="quick-action card" href="/emergency"><span class="quick-action-icon" aria-hidden="true">♡</span><span>${t('senior.quickEmergency')}</span></a>
+          <a class="quick-action card" href="/safety"><span class="quick-action-icon" aria-hidden="true">✓</span><span>${t('senior.quickSafety')}</span></a>
         </div>
       </section>
       <section id="senior-safety-summary" class="card safety-dashboard-summary mt-4" aria-labelledby="senior-safety-summary-heading"></section>
@@ -137,7 +137,7 @@ export function renderSenior(container) {
       <!-- Schedule Content Area -->
       <section id="senior-schedule-list" class="senior-schedule" aria-label="${t('senior.todaySchedule')}">
       </section>
-      <p class="guide-prompt"><a href="#/how-to-use">${t('senior.howToUseLink')}</a></p>
+      <p class="guide-prompt"><a href="/how-to-use">${t('senior.howToUseLink')}</a></p>
     </div>
   `
 
@@ -168,7 +168,7 @@ export function renderSenior(container) {
     safetySummary.innerHTML = `
       <div class="section-header-row">
         <h2 id="senior-safety-summary-heading" class="section-title">${t('safety.title')}</h2>
-        <a class="btn btn-ghost btn-sm" href="#/safety">${t('safety.checkNow')}</a>
+        <a class="btn btn-ghost btn-sm" href="/safety">${t('safety.checkNow')}</a>
       </div>
       <p class="text-secondary">${safetyWarnings.length === 0 ? t('safety.empty') : t('safety.summary', { count: safetyWarnings.length })}</p>
       <div class="safety-summary-inline">
@@ -246,7 +246,7 @@ export function renderSenior(container) {
       emptyCard.appendChild(emptyAddBtn)
       const guideLink = document.createElement('a')
       guideLink.className = 'empty-guide-link'
-      guideLink.href = '#/how-to-use'
+      guideLink.href = '/how-to-use'
       guideLink.textContent = t('senior.howToUseLink')
       emptyCard.appendChild(guideLink)
       scheduleListEl.appendChild(emptyCard)
@@ -449,7 +449,7 @@ function createDoseCard(item, index, refreshSchedule, announce) {
   if (!isTaken) {
     const btnMissedHelp = document.createElement('a')
     btnMissedHelp.className = 'btn btn-ghost btn-missed-help'
-    btnMissedHelp.href = `#/dose-decision?medId=${encodeURIComponent(medication.id)}&time=${encodeURIComponent(scheduledTime)}`
+    btnMissedHelp.href = `/missed-dose?medId=${encodeURIComponent(medication.id)}&time=${encodeURIComponent(scheduledTime)}`
     btnMissedHelp.setAttribute('aria-label', `${t('senior.missedDoseAction')} for ${medication.name}`)
     btnMissedHelp.innerHTML = `<span aria-hidden="true">❓</span> <span>${t('senior.missedDoseAction')}</span>`
     footerRow.appendChild(btnMissedHelp)

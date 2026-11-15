@@ -357,7 +357,7 @@ function renderMissedHistory(records) {
                 </span>
               </td>
               <td class="no-print">
-                <a href="#/dose-decision?medId=${encodeURIComponent(r.medicationId)}&time=${encodeURIComponent(r.time)}" class="btn btn-ghost btn-sm">
+                <a href="/missed-dose?medId=${encodeURIComponent(r.medicationId)}&time=${encodeURIComponent(r.time)}" class="btn btn-ghost btn-sm">
                   ${t('caregiver.doseDecision')}
                 </a>
               </td>

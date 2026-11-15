@@ -140,6 +140,7 @@ export function showModal({
     function closeModal(confirmed) {
       if (isClosing) return
       isClosing = true
+      document.removeEventListener('app:navigate', handleNavigation)
 
       /* Animate out */
       backdrop.classList.add('modal-exit')
@@ -154,6 +155,10 @@ export function showModal({
       /* Restore focus */
       if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
         previouslyFocused.focus()
+      }
+
+      function handleNavigation() {
+        closeModal(false)
       }
 
       function finish() {
@@ -216,6 +221,7 @@ export function showModal({
     }
 
     document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('app:navigate', handleNavigation)
 
     /* Clean up key listener when modal resolves */
     backdrop.addEventListener('animationend', () => {

@@ -28,7 +28,8 @@ npm.cmd run build
 
 The build command is `npm run build` and the output directory is `dist/`.
 `vite.config.js` does not override the base, so Vite uses `/`. The app uses
-hash navigation, not path-based routes, so no SPA rewrite file is needed.
+History API routes, and `vercel.json` rewrites application paths to
+`/index.html` while excluding real assets and files.
 
 ## Option A: Vercel dashboard
 
@@ -63,11 +64,12 @@ The production HTML references `/manifest.json`, `/icons/icon-192.svg`,
 scope. The manifest start URL is `/`. These root-relative paths match the
 configured Vite base and Vercel root deployment.
 
-The service worker cache is currently `niramaya-v5`. It precaches the built
-shell and declared static assets, caches same-origin GET responses at runtime,
-cleans older cache versions during activation, and falls back to cached `/`
-when a same-origin request fails. After publishing a new build, users may
-need to refresh once so the updated service worker activates.
+The service worker cache is currently `niramaya-v12`. It precaches `/` and
+`/index.html` plus declared static assets, serves cached `/` for known
+History API navigation paths when offline, caches same-origin GET responses at
+runtime, and cleans older cache versions during activation. After publishing a
+new build, users may need to refresh once so the updated service worker
+activates.
 
 Do not configure a long-lived CDN cache for `sw.js`; it must be revalidated so
 cache-version changes can reach clients. Vercel's default static asset
@@ -77,8 +79,10 @@ handling is sufficient for the hashed Vite assets.
 
 - Open the deployment root URL and confirm the Senior Mode view loads.
 - Confirm `/manifest.json`, both icon paths, and `/sw.js` return successfully.
-- Navigate through `#/senior`, `#/dose-decision`, `#/caregiver`,
-  `#/emergency`, `#/safety`, and `#/settings`.
+- Navigate through `/`, `/missed-dose`, `/caregiver`, `/emergency`, `/safety`,
+  `/how-to-use`, and `/settings`.
+- Open each clean route directly and refresh it to verify the SPA rewrite.
+- Open an old `/#/senior` link and verify it redirects to `/`.
 - Switch between English, Hindi, and Kannada and confirm the document language
   and visible labels update.
 - Add fictional sample medication data only; do not use real patient data.
@@ -104,8 +108,8 @@ existing installed service worker, not only a first install.
   project root and output directory are correct.
 - **Offline shell unavailable:** first load the site online, wait for the
   service worker to install, then test Offline in DevTools.
-- **Unexpected route behavior:** use the hash routes; path-based rewrites are
-  not part of this app.
+- **Unexpected route behavior:** confirm `vercel.json` is deployed and that
+  the requested path is an application route rather than a real asset.
 - **Build failure:** run `npm.cmd test` and `npm.cmd run build` locally and
   inspect the first reported error.
 

@@ -1,10 +1,11 @@
 import './style.css'
-import { router } from './modules/router.js'
+import { router, ROUTES } from './modules/router.js'
 import { initStore, getStore, KEYS } from './modules/store.js'
 import { t, setLanguage, getLocale, initLocale } from './i18n/index.js'
 import { renderHowToUse } from './views/howToUse.js'
 import { showToast } from './components/toast.js'
 import { openWelcomeGuide } from './components/welcome.js'
+import { closeWelcomeGuide } from './components/welcome.js'
 import { shouldShowWelcome } from './modules/welcomeState.js'
 import { getSettings, applySettingsToDocument } from './modules/settings.js'
 import { registerConnectivityListeners } from './modules/connectivity.js'
@@ -30,6 +31,17 @@ function placeholderView(title) {
   return (container) => {
     container.innerHTML = `<div class="view-placeholder"><h1>${title}</h1><p>This feature is being built.</p></div>`
   }
+
+  function renderNotFound(container) {
+    if (!container) return
+    container.innerHTML = `
+      <section class="view-container view-placeholder" aria-labelledby="not-found-heading">
+        <h1 id="not-found-heading" tabindex="-1">${t('routing.pageNotFoundTitle')}</h1>
+        <p>${t('routing.pageNotFoundBody')}</p>
+        <a class="btn btn-primary" href="/">${t('routing.goHome')}</a>
+      </section>
+    `
+  }
 }
 
 async function loadViews() {
@@ -48,7 +60,7 @@ function buildAppShell() {
 <header id="app-header" role="banner">
   <div class="header-inner">
    <div class="header-top">
-    <a class="header-brand" href="#/senior" aria-label="${t('a11y.logo')}">
+    <a class="header-brand" href="/" aria-label="${t('a11y.logo')}">
       <img class="brand-icon" src="/logo.svg" alt="" width="40" height="40">
       <span class="brand-name">Niramaya</span>
     </a>
@@ -68,7 +80,7 @@ function buildAppShell() {
     </div>
    </div>
    <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
-      ${[['senior','senior'],['dose-decision','dose'],['caregiver','caregiver'],['emergency','emergency'],['safety','safety'],['how-to-use','guide'],['settings','settings']].map(([route, icon]) => `<a href="#/${route}" class="nav-link" data-route="${route}">${iconSvg(icon)}<span>${t(`nav.${route === 'dose-decision' ? 'doseDecision' : route === 'how-to-use' ? 'howToUse' : route}`)}</span></a>`).join('')}
+      ${Object.entries(ROUTES).map(([path, route]) => `<a href="${path}" class="nav-link" data-route="${path}">${iconSvg(route.id === 'dose-decision' ? 'dose' : route.id === 'how-to-use' ? 'guide' : route.id)}<span>${t(route.titleKey)}</span></a>`).join('')}
     </nav>
 </header>
 
@@ -77,22 +89,22 @@ function buildAppShell() {
 </main>
 
 <nav id="app-nav" aria-label="${t('a11y.bottomNavigation')}" role="navigation">
-  <a href="#/senior" class="tab-item" data-route="senior" aria-label="${t('nav.senior')}">
+  <a href="/" class="tab-item" data-route="/" aria-label="${t('nav.senior')}">
     ${iconSvg('senior')}<span class="tab-label">${t('nav.senior')}</span>
   </a>
-  <a href="#/dose-decision" class="tab-item" data-route="dose-decision" aria-label="${t('nav.doseDecision')}">
+  <a href="/missed-dose" class="tab-item" data-route="/missed-dose" aria-label="${t('nav.doseDecision')}">
     ${iconSvg('dose')}<span class="tab-label">${t('nav.doseDecision')}</span>
   </a>
-  <a href="#/caregiver" class="tab-item" data-route="caregiver" aria-label="${t('nav.caregiver')}">
+  <a href="/caregiver" class="tab-item" data-route="/caregiver" aria-label="${t('nav.caregiver')}">
     ${iconSvg('caregiver')}<span class="tab-label">${t('nav.caregiver')}</span>
   </a>
-  <a href="#/emergency" class="tab-item" data-route="emergency" aria-label="${t('nav.emergency')}">
+  <a href="/emergency" class="tab-item" data-route="/emergency" aria-label="${t('nav.emergency')}">
     ${iconSvg('emergency')}<span class="tab-label">${t('nav.emergency')}</span>
   </a>
-  <a href="#/safety" class="tab-item" data-route="safety" aria-label="${t('nav.safety')}">
+  <a href="/safety" class="tab-item" data-route="/safety" aria-label="${t('nav.safety')}">
     ${iconSvg('safety')}<span class="tab-label">${t('nav.safety')}</span>
   </a>
-  <a href="#/settings" class="tab-item" data-route="settings" aria-label="${t('nav.settings')}">
+  <a href="/settings" class="tab-item" data-route="/settings" aria-label="${t('nav.settings')}">
     ${iconSvg('settings')}<span class="tab-label">${t('nav.settings')}</span>
   </a>
 </nav>
@@ -100,16 +112,24 @@ function buildAppShell() {
 <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
 <div id="locale-live-region" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="modal-container"></div>
-<footer class="app-footer"><span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a></footer>
+<footer class="app-footer"><span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="/how-to-use">${t('footer.notMedicalAdvice')}</a></footer>
 `
 }
 
 // ─── Nav active state ────────────────────────────────────────────────────────
 function updateNavActiveState(route) {
-  const currentRoute = route || window.location.hash.replace(/^#\//, '') || 'senior'
+  const currentRoute = route || router.getCurrentRoute()?.path || window.location.pathname || '/'
   document.querySelectorAll('[data-route]').forEach(el => {
     el.classList.toggle('active', el.dataset.route === currentRoute)
+    if (el.dataset.route === currentRoute) el.setAttribute('aria-current', 'page')
+    else el.removeAttribute('aria-current')
   })
+}
+
+function updateRouteTitle(route) {
+  const titleKey = ROUTES[route?.path]?.titleKey
+  const title = titleKey ? t(titleKey) : t('routing.pageNotFoundTitle')
+  document.title = `${t('app.name')} — ${title}`
 }
 
 // ─── Locale ──────────────────────────────────────────────────────────────────
@@ -123,18 +143,17 @@ function applyLocale() {
 
   // Update desktop nav text
   document.querySelectorAll('#app-desktop-nav .nav-link[data-route]').forEach(el => {
-    const key = el.dataset.route === 'dose-decision' ? 'doseDecision' : el.dataset.route === 'how-to-use' ? 'howToUse' : el.dataset.route
     const label = el.querySelector('span:not(.ui-icon)')
-    if (label) label.textContent = t(`nav.${key}`)
+    const route = ROUTES[el.dataset.route]
+    if (label && route) label.textContent = t(route.titleKey)
   })
 
   // Update bottom nav labels
   document.querySelectorAll('#app-nav .tab-item .tab-label').forEach(el => {
     const route = el.closest('[data-route]')?.dataset.route
-    if (route) {
-      const key = route === 'dose-decision' ? 'doseDecision' : route
-      el.textContent = t(`nav.${key}`)
-      el.closest('[data-route]')?.setAttribute('aria-label', t(`nav.${key}`))
+    if (route && ROUTES[route]) {
+      el.textContent = t(ROUTES[route].titleKey)
+      el.closest('[data-route]')?.setAttribute('aria-label', t(ROUTES[route].titleKey))
     }
   })
   const selector = document.getElementById('language-selector')
@@ -145,7 +164,7 @@ function applyLocale() {
   const status = document.querySelector('#online-status .status-label')
   if (status) status.textContent = isOnline ? t('a11y.online') : t('a11y.offline')
   const footer = document.querySelector('.app-footer')
-  if (footer) footer.innerHTML = `<span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="#/how-to-use">${t('footer.notMedicalAdvice')}</a>`
+  if (footer) footer.innerHTML = `<span>${t('footer.version')}</span><span>${t('footer.worksOffline')}</span><a href="/how-to-use">${t('footer.notMedicalAdvice')}</a>`
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -179,19 +198,30 @@ async function init() {
   buildAppShell()
 
   // 5. Register routes
-  router.register('/senior', () => renderSenior(document.getElementById('app-main')))
+  router.register('/', () => renderSenior(document.getElementById('app-main')))
   router.register('/caregiver', () => renderCaregiver(document.getElementById('app-main')))
   router.register('/emergency', () => renderEmergency(document.getElementById('app-main')))
-  router.register('/dose-decision', () => renderDoseDecision(document.getElementById('app-main')))
+  router.register('/missed-dose', () => renderDoseDecision(document.getElementById('app-main')))
   router.register('/safety', () => renderSafetyChecker(document.getElementById('app-main')))
   router.register('/settings', () => renderSettings(document.getElementById('app-main')))
   router.register('/how-to-use', () => renderHowToUse(document.getElementById('app-main')))
+  router.setNotFoundHandler(renderNotFound)
+  router.setRouteChangeHandler((route, { initial, notFound }) => {
+    closeWelcomeGuide()
+    updateNavActiveState(route.path)
+    const title = notFound ? t('routing.pageNotFoundTitle') : t(ROUTES[route.path]?.titleKey || 'nav.senior')
+    updateRouteTitle(route)
+    if (!initial) {
+      window.scrollTo(0, 0)
+      const liveRegion = document.getElementById('locale-live-region')
+      if (liveRegion) liveRegion.textContent = title
+    }
+  })
 
   // 6. Start router (navigates to current hash or default)
   router.init()
 
-  // 7. Set initial nav active state
-  updateNavActiveState()
+  // 7. Initial route metadata is applied by the router without stealing focus.
 
   const languageSelector = document.getElementById('language-selector')
   if (languageSelector) {
@@ -209,16 +239,13 @@ async function init() {
     applySettings()
     applyLocale()
     router.rerender()
+    const route = router.getCurrentRoute()
+    updateNavActiveState(route?.path)
+    updateRouteTitle(route)
   })
   document.addEventListener('settingschange', () => {
     applySettings()
     router.rerender()
-  })
-
-  // 11. Hash change → update nav active state
-  window.addEventListener('hashchange', () => {
-    const route = window.location.hash.replace(/^#\//, '') || 'senior'
-    updateNavActiveState(route)
   })
 
   const updateOnlineStatus = (nextIsOnline, { announce = true } = {}) => {

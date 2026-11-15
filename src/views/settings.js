@@ -97,10 +97,10 @@ export function renderSettings(container) {
       <section class="card settings-card stack" aria-labelledby="settings-help-heading">
         <h2 id="settings-help-heading">${t('settings.help')}</h2>
         <div class="button-group">
-          <a class="btn btn-secondary" href="#/how-to-use">${t('settings.openGuide')}</a>
+          <a class="btn btn-secondary" href="/how-to-use">${t('settings.openGuide')}</a>
           <button id="show-welcome-guide" class="btn btn-secondary" type="button">${t('welcome.showGuide')}</button>
-          <a class="btn btn-secondary" href="#/safety">${t('settings.openSafety')}</a>
-          <a class="btn btn-ghost" href="#/how-to-use">${t('settings.disclaimer')}</a>
+          <a class="btn btn-secondary" href="/safety">${t('settings.openSafety')}</a>
+          <a class="btn btn-ghost" href="/how-to-use">${t('settings.disclaimer')}</a>
         </div>
       </section>
 

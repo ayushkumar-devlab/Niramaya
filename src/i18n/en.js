@@ -17,6 +17,12 @@ export const en = {
     offline: 'You are offline. Changes will sync when reconnected.',
   },
 
+  routing: {
+    pageNotFoundTitle: 'Page not found',
+    pageNotFoundBody: 'This page is not available in Niramaya.',
+    goHome: 'Go to Senior Mode',
+  },
+
   senior: {
     title: "Today's Medications",
     subtitle: 'Stay on track with your daily doses',
@@ -437,23 +443,18 @@ export const en = {
 
   welcome: {
     title: 'Welcome to Niramaya',
-    greeting: 'Hello',
     tagline: 'Your trusted companion for safer medication management.',
-    intro: 'Track medicines, doses, and emergency information in one simple place.',
     chooseLanguage: 'Choose your language',
     english: 'English',
     hindi: 'हिन्दी',
     kannada: 'ಕನ್ನಡ',
-    stepCounter: '{current} of {total}',
-    next: 'Next',
-    back: 'Back',
-    skip: 'Skip',
+    howToUse: 'How to use',
+    addMedicines: 'Add your medicines',
+    checkSchedule: "Check today's schedule",
+    markTaken: 'Mark doses as taken',
+    emergencyCard: 'Fill your Emergency Card',
+    privacyLine: 'Your data stays on this device. Niramaya does not replace your doctor or pharmacist.',
     getStarted: 'Get started',
-    readAloud: 'Read this step aloud',
-    finalTitle: 'You are ready to begin',
-    finalData: 'Your data stays on this device.',
-    finalOffline: 'Niramaya works offline after it has loaded.',
-    finalMedical: 'Niramaya does not replace your doctor or pharmacist.',
     showGuide: 'Show welcome guide',
   },
 

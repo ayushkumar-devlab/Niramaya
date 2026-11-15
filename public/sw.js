@@ -1,8 +1,10 @@
-const CACHE_NAME = 'niramaya-v10'
+const CACHE_NAME = 'niramaya-v12'
 const OFFLINE_URL = '/'
 
 // Assets to pre-cache on install
 const PRECACHE_URLS = [
+  '/',
+  '/index.html',
   '/manifest.json',
   '/logo.svg',
   '/logo-192.png',
@@ -38,7 +40,20 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip non-GET and cross-origin
   if (event.request.method !== 'GET') return
-  if (!event.request.url.startsWith(self.location.origin)) return
+  const requestUrl = new URL(event.request.url)
+  if (requestUrl.origin !== self.location.origin) return
+  const knownNavigationPaths = ['/', '/missed-dose', '/caregiver', '/emergency', '/safety', '/how-to-use', '/settings']
+  if (event.request.mode === 'navigate' && knownNavigationPaths.includes(requestUrl.pathname)) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/'))
+    )
+    return
+  }
+
+  const isStaticAsset = PRECACHE_URLS.includes(requestUrl.pathname)
+    || requestUrl.pathname.startsWith('/assets/')
+    || requestUrl.pathname.startsWith('/icons/')
+  if (!isStaticAsset) return
 
   event.respondWith(
     caches.match(event.request).then(cached => {

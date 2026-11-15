@@ -1,146 +1,182 @@
-// router.js — Lightweight hash-based SPA router
+// Lightweight History API router with legacy hash redirects.
+
+export const ROUTES = Object.freeze({
+  '/': Object.freeze({ id: 'senior', titleKey: 'nav.senior' }),
+  '/missed-dose': Object.freeze({ id: 'dose-decision', titleKey: 'nav.doseDecision' }),
+  '/caregiver': Object.freeze({ id: 'caregiver', titleKey: 'nav.caregiver' }),
+  '/emergency': Object.freeze({ id: 'emergency', titleKey: 'nav.emergency' }),
+  '/safety': Object.freeze({ id: 'safety', titleKey: 'nav.safety' }),
+  '/how-to-use': Object.freeze({ id: 'how-to-use', titleKey: 'nav.howToUse' }),
+  '/settings': Object.freeze({ id: 'settings', titleKey: 'nav.settings' }),
+})
+
+export const LEGACY_HASH_ROUTES = Object.freeze({
+  '#/': '/',
+  '#/senior': '/',
+  '#/missed': '/missed-dose',
+  '#/missed-dose': '/missed-dose',
+  '#/dose-decision': '/missed-dose',
+  '#/caregiver': '/caregiver',
+  '#/emergency': '/emergency',
+  '#/safety': '/safety',
+  '#/how-to-use': '/how-to-use',
+  '#/settings': '/settings',
+})
+
+const ASSET_PATH = /\/(?:assets|icons)(?:\/|$)|\/[^/]*\.[^/]+$/
+
+export function isAssetPath(pathname) {
+  return ASSET_PATH.test(pathname)
+}
+
+export function normalizePath(input = '/') {
+  const raw = String(input || '/')
+  const base = typeof window !== 'undefined' && window.location?.origin
+    ? window.location.origin
+    : 'http://localhost'
+  const url = new URL(raw, base)
+  let pathname = url.pathname || '/'
+  if (pathname.length > 1) pathname = pathname.replace(/\/+$/, '')
+  return `${pathname}${url.search}`
+}
+
+function splitLocation(input) {
+  const normalized = normalizePath(input)
+  const queryIndex = normalized.indexOf('?')
+  return {
+    pathname: queryIndex === -1 ? normalized : normalized.slice(0, queryIndex),
+    search: queryIndex === -1 ? '' : normalized.slice(queryIndex),
+  }
+}
+
+function legacyTarget(hash) {
+  if (!hash || !hash.startsWith('#/')) return null
+  const hashLocation = splitLocation(hash.slice(1))
+  const route = LEGACY_HASH_ROUTES[`#${hashLocation.pathname}`]
+  return route ? `${route}${hashLocation.search}` : null
+}
 
 export class Router {
   constructor() {
     /** @type {Record<string, Function>} */
     this.routes = {}
-    /** @type {{ path: string, params: Record<string, string> }|null} */
+    /** @type {{ path: string, params: Record<string, string>, search: string }|null} */
     this.currentRoute = null
     /** @type {((to: object, from: object|null) => boolean|void)|null} */
     this.beforeEach = null
+    this.notFoundHandler = null
+    this.onRouteChange = null
+    this.initialized = false
+    this._handlePopState = () => this._renderLocation(false)
+    this._handleClick = (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const link = event.target.closest?.('a[href]')
+      if (!link || link.target === '_blank' || link.hasAttribute('download')) return
+      const url = new URL(link.href, window.location.origin)
+      if (url.origin !== window.location.origin || isAssetPath(url.pathname)) return
+      event.preventDefault()
+      this.navigate(`${url.pathname}${url.search}`)
+    }
   }
 
-  /**
-   * Register a route handler.
-   * @param {string} path - e.g. '/senior' or '/medication/:id'
-   * @param {(params: Record<string, string>) => void} handler
-   */
   register(path, handler) {
-    this.routes[path] = handler
+    this.routes[normalizePath(path).split('?')[0]] = handler
   }
 
-  /**
-   * Programmatically navigate to a path.
-   * @param {string} path - e.g. '/senior' or '/medication/123'
-   * @param {Record<string, string>} [params={}]
-   */
-  navigate(path, params = {}) {
-    // Build query string from params not embedded in the path itself
-    window.location.hash = `#${path}`
+  setNotFoundHandler(handler) {
+    this.notFoundHandler = handler
   }
 
-  /** Go back in browser history. */
+  setRouteChangeHandler(handler) {
+    this.onRouteChange = handler
+  }
+
+  navigate(path, { replace = false } = {}) {
+    const target = normalizePath(path)
+    if (replace) history.replaceState({}, '', target)
+    else history.pushState({}, '', target)
+    this._renderLocation(false)
+  }
+
   back() {
     history.back()
   }
 
-  /** @returns {{ path: string, params: Record<string, string> }|null} */
   getCurrentRoute() {
     return this.currentRoute
   }
 
   rerender() {
-    if (this.currentRoute) this._render(this.currentRoute.path, this.currentRoute.params)
+    if (this.currentRoute) this._render(this.currentRoute.path, this.currentRoute.params, this.currentRoute.search, true, false)
   }
 
-  /**
-   * Initialise the router: attach hashchange listener and handle the
-   * current hash (or default to #/senior).
-   */
   init() {
-    window.addEventListener('hashchange', () => {
-      const hash = window.location.hash || '#/senior'
-      const result = this._resolve(hash)
-      if (result) {
-        this._render(result.path, result.params)
-      }
-    })
+    if (this.initialized) return
+    this.initialized = true
+    window.addEventListener('popstate', this._handlePopState)
+    document.addEventListener('click', this._handleClick)
 
-    // Handle the initial hash on page load
-    const initialHash = window.location.hash || '#/senior'
-    if (!window.location.hash) {
-      window.location.hash = '#/senior'
-    } else {
-      const result = this._resolve(initialHash)
-      if (result) {
-        this._render(result.path, result.params)
-      }
+    const legacy = legacyTarget(window.location.hash)
+    if (legacy) {
+      history.replaceState({}, '', legacy)
+    } else if (window.location.hash) {
+      history.replaceState({}, '', `${normalizePath(window.location.pathname)}${window.location.search}`)
     }
+
+    this._renderLocation(true)
   }
 
-  /**
-   * Match a hash string to a registered route and extract path params.
-   * @param {string} hash - e.g. '#/medication/abc123'
-   * @returns {{ path: string, params: Record<string, string> }|null}
-   */
-  _resolve(hash) {
-    // Strip leading '#' to get the path portion e.g. '/medication/abc123'
-    const rawPath = hash.startsWith('#') ? hash.slice(1) : hash
-    const urlParts = rawPath.split('/').filter(Boolean)
+  _renderLocation(initial) {
+    const { pathname, search } = splitLocation(`${window.location.pathname}${window.location.search}`)
+    this._render(pathname, {}, search, initial, false)
+  }
 
-    for (const [routePath, _handler] of Object.entries(this.routes)) {
+  _resolve(input) {
+    const { pathname, search } = splitLocation(input)
+    if (isAssetPath(pathname)) return null
+
+    for (const [routePath, handler] of Object.entries(this.routes)) {
       const routeParts = routePath.split('/').filter(Boolean)
-
+      const urlParts = pathname.split('/').filter(Boolean)
       if (routeParts.length !== urlParts.length) continue
 
       const params = {}
       let matched = true
-
-      for (let i = 0; i < routeParts.length; i++) {
-        if (routeParts[i].startsWith(':')) {
-          // Dynamic segment — capture as param
-          params[routeParts[i].slice(1)] = decodeURIComponent(urlParts[i])
-        } else if (routeParts[i] !== urlParts[i]) {
-          matched = false
-          break
-        }
+      for (let i = 0; i < routeParts.length; i += 1) {
+        if (routeParts[i].startsWith(':')) params[routeParts[i].slice(1)] = decodeURIComponent(urlParts[i])
+        else if (routeParts[i] !== urlParts[i]) matched = false
       }
-
-      if (matched) {
-        return { path: routePath, params }
-      }
+      if (matched) return { path: routePath, params, search, handler }
     }
 
-    // No match — fall back to default route if registered
-    if (this.routes['/senior']) {
-      return { path: '/senior', params: {} }
-    }
-
-    return null
+    return { path: pathname, params: {}, search, handler: null, notFound: true }
   }
 
-  /**
-   * Call the route handler, update currentRoute, and focus the first h1.
-   * @param {string} path
-   * @param {Record<string, string>} params
-   */
-  _render(path, params) {
-    const handler = this.routes[path]
-    if (!handler) return
-
-    const to = { path, params }
+  _render(path, params, search = '', initial = false, fromRerender = false) {
+    const resolved = this._resolve(`${path}${search}`)
+    if (!resolved) return
+    const to = { path: resolved.path, params, search }
     const from = this.currentRoute
+    if (!fromRerender && typeof this.beforeEach === 'function' && this.beforeEach(to, from) === false) return
 
-    // Run navigation guard if set
-    if (typeof this.beforeEach === 'function') {
-      const result = this.beforeEach(to, from)
-      if (result === false) return // navigation cancelled
+    if (!initial && !fromRerender) {
+      document.dispatchEvent(new CustomEvent('app:navigate', { detail: to }))
     }
-
     this.currentRoute = to
-    handler(params)
+    if (resolved.handler) resolved.handler(params)
+    else if (this.notFoundHandler) this.notFoundHandler(document.getElementById('app-main'), to)
 
-    // Accessibility: move focus to the main heading after render
-    // Use a microtask so the handler has time to inject DOM
-    Promise.resolve().then(() => {
-      const h1 = document.querySelector('#app-main h1')
-      if (h1) {
-        if (!h1.hasAttribute('tabindex')) h1.setAttribute('tabindex', '-1')
-        h1.focus()
-      }
-    })
+    if (!fromRerender) this.onRouteChange?.(to, { initial, notFound: Boolean(resolved.notFound), from })
+    if (!initial && !fromRerender) {
+      Promise.resolve().then(() => {
+        const heading = document.querySelector('#app-main h1')
+        if (heading) {
+          if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1')
+          heading.focus()
+        }
+      })
+    }
   }
 }
 
-/** Singleton router instance */
 export const router = new Router()

@@ -84,9 +84,12 @@ npm run dev
 npm.cmd run dev
 ```
 
-Vite serves the application locally. The application uses hash navigation, so
-the routes are `#/senior`, `#/dose-decision`, `#/caregiver`, `#/emergency`,
-`#/safety`, and `#/settings`.
+Vite serves the application locally. The application uses History API
+navigation with these routes: `/`, `/missed-dose`, `/caregiver`, `/emergency`,
+`/safety`, `/how-to-use`, and `/settings`. Vercel rewrites application paths
+to the SPA shell; the service worker provides the same shell fallback for
+known routes while offline. Old hash links such as `/#/senior` are redirected
+to their clean equivalents.
 
 ## Testing
 

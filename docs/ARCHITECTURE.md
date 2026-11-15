@@ -65,8 +65,9 @@ application UI does not use them.
 ## Modules and responsibilities
 
 - `main.js` bootstraps the store and locale, builds the shell, registers the
-  hash routes, and registers `/sw.js`.
-- `router.js` resolves hash routes and focuses the rendered view heading.
+  History API routes, and registers `/sw.js`.
+- `router.js` owns the frozen route table, clean-path navigation, popstate
+  rendering, internal-link interception, and legacy hash redirects.
 - `store.js` is the LocalStorage wrapper, schema initializer, backup exporter,
   importer, and corruption/quota error boundary.
 - `medications.js` owns medication validation, CRUD, schedule calculation, dose
@@ -88,6 +89,24 @@ application UI does not use them.
 - `modal.js` and `toast.js` provide shared dialog and notification behavior.
 - `views/` turns module results into the Senior Mode, DoseDecision, CareCircle,
   Emergency, Safety Check, and Settings screens.
+
+### Route table
+
+| Path | View |
+| --- | --- |
+| `/` | Senior Mode |
+| `/missed-dose` | Missed Dose |
+| `/caregiver` | CareCircle |
+| `/emergency` | Emergency Snapshot |
+| `/safety` | Safety Check |
+| `/how-to-use` | How to Use |
+| `/settings` | Settings |
+
+The router uses `history.pushState()` and `popstate`, preserves query
+parameters, and redirects legacy hash bookmarks such as `/#/senior` with
+`history.replaceState()`. Unknown non-asset paths render the translated
+not-found view. Vercel rewrites application paths to `index.html`; the service
+worker serves the cached `/` shell for known navigation paths when offline.
 
 ## Data flow
 
