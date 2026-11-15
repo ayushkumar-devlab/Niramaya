@@ -1,17 +1,35 @@
-// medications.js — Medication CRUD and schedule engine
+// medications.js — Medication CRUD, schedule engine, and dose logging
 
-import { KEYS, getStore, setStore, updateStore } from './store.js'
+import { KEYS, getStore, updateStore } from './store.js'
+
+export const MISSED_THRESHOLD_MINUTES = 60
+
+/** Standard frequency options */
+export const FREQUENCIES = {
+  ONCE_DAILY: 'once_daily',
+  TWICE_DAILY: 'twice_daily',
+  THREE_TIMES_DAILY: 'three_times_daily',
+  CUSTOM: 'custom',
+}
+
+/** Default times suggestion per frequency */
+export const DEFAULT_FREQUENCY_TIMES = {
+  [FREQUENCIES.ONCE_DAILY]: ['08:00'],
+  [FREQUENCIES.TWICE_DAILY]: ['08:00', '20:00'],
+  [FREQUENCIES.THREE_TIMES_DAILY]: ['08:00', '14:00', '20:00'],
+  [FREQUENCIES.CUSTOM]: ['08:00'],
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /**
- * Returns today's date as a YYYY-MM-DD string in local time.
+ * Returns a date formatted as YYYY-MM-DD.
+ * @param {Date} [d=new Date()]
  * @returns {string}
  */
-export function getTodayString() {
-  const d = new Date()
+export function getTodayString(d = new Date()) {
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -19,8 +37,7 @@ export function getTodayString() {
 }
 
 /**
- * Generate a unique ID using crypto.randomUUID when available,
- * falling back to a Date.now + random suffix.
+ * Generate a unique ID using crypto.randomUUID when available.
  * @returns {string}
  */
 function _genId() {
@@ -30,22 +47,92 @@ function _genId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 }
 
+/**
+ * Validates 'HH:MM' 24-hour format string.
+ * @param {string} timeStr
+ * @returns {boolean}
+ */
+export function isValidTimeFormat(timeStr) {
+  if (typeof timeStr !== 'string') return false
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr.trim())
+}
+
+/**
+ * Validates medication payload.
+ * Returns { valid: boolean, errors: string[] }
+ * @param {object} data
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
+export function validateMedicationInput(data) {
+  const errors = []
+
+  if (!data || typeof data !== 'object') {
+    return { valid: false, errors: ['Invalid medication data'] }
+  }
+
+  const name = typeof data.name === 'string' ? data.name.trim() : ''
+  if (!name) {
+    errors.push('Medication name is required')
+  } else if (name.length > 100) {
+    errors.push('Medication name must be 100 characters or fewer')
+  }
+
+  const dosage = typeof (data.dosage || data.dose) === 'string' ? (data.dosage || data.dose).trim() : ''
+  if (!dosage) {
+    errors.push('Dosage is required (e.g. 500mg, 1 tablet)')
+  } else if (dosage.length > 50) {
+    errors.push('Dosage must be 50 characters or fewer')
+  }
+
+  if (!Array.isArray(data.times) || data.times.length === 0) {
+    errors.push('At least one scheduled time is required')
+  } else {
+    const uniqueTimes = new Set()
+    for (const t of data.times) {
+      if (!isValidTimeFormat(t)) {
+        errors.push(`Invalid time format "${t}" (must be HH:MM in 24-hour format)`)
+      } else {
+        const norm = t.trim()
+        if (uniqueTimes.has(norm)) {
+          errors.push(`Duplicate time entry "${norm}"`)
+        }
+        uniqueTimes.add(norm)
+      }
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Medication CRUD
 // ---------------------------------------------------------------------------
 
 /**
- * Returns all medications from the store.
- * @returns {Medication[]}
+ * Returns all active medications from the store.
+ * @returns {Array<object>}
  */
 export function getAllMedications() {
-  return getStore(KEYS.MEDICATIONS) ?? []
+  const list = getStore(KEYS.MEDICATIONS) ?? []
+  return Array.isArray(list) ? list.filter((m) => !m.deleted) : []
 }
 
 /**
- * Returns a single medication by id, or null if not found.
+ * Returns all medications including deleted ones (useful for audit/history).
+ * @returns {Array<object>}
+ */
+export function getAllMedicationsWithDeleted() {
+  const list = getStore(KEYS.MEDICATIONS) ?? []
+  return Array.isArray(list) ? list : []
+}
+
+/**
+ * Returns a single active medication by id.
  * @param {string} id
- * @returns {Medication|null}
+ * @returns {object|null}
  */
 export function getMedication(id) {
   const meds = getAllMedications()
@@ -53,26 +140,34 @@ export function getMedication(id) {
 }
 
 /**
- * Adds a new medication. Generates id and timestamps.
- * @param {Partial<Medication>} data
- * @returns {Medication}
+ * Adds a new medication after validation.
+ * @param {object} data
+ * @returns {{ success: boolean, medication?: object, errors?: string[] }}
  */
 export function addMedication(data) {
+  const validation = validateMedicationInput(data)
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
   const now = new Date().toISOString()
+  const cleanedTimes = [...new Set(data.times.map((t) => t.trim()))].sort()
+
   const medication = {
     id: _genId(),
-    name: '',
-    activeIngredient: '',
-    dose: '',
-    unit: '',
-    frequency: 'daily',
-    times: [],
-    instructions: '',
-    clinicianInstructions: '',
-    startDate: getTodayString(),
-    endDate: null,
-    color: '#0d9488',
-    ...data,
+    name: data.name.trim(),
+    dosage: (data.dosage || data.dose || '').trim(),
+    dose: (data.dosage || data.dose || '').trim(), // backward-compatible
+    unit: (data.unit || '').trim(),
+    activeIngredient: (data.activeIngredient || '').trim(),
+    frequency: data.frequency || FREQUENCIES.ONCE_DAILY,
+    times: cleanedTimes,
+    instructions: (data.instructions || '').trim(),
+    clinicianInstructions: (data.clinicianInstructions || '').trim(),
+    startDate: data.startDate || getTodayString(),
+    endDate: data.endDate || null,
+    color: data.color || '#0d9488',
+    deleted: false,
     createdAt: now,
     updatedAt: now,
   }
@@ -82,199 +177,250 @@ export function addMedication(data) {
     return [...list, medication]
   })
 
-  return medication
+  return { success: true, medication }
 }
 
 /**
- * Updates an existing medication by id.
+ * Updates an existing medication by id. Preserves existing history and logs.
  * @param {string} id
- * @param {Partial<Medication>} data
- * @returns {Medication|null} Updated medication, or null if not found.
+ * @param {object} data
+ * @returns {{ success: boolean, medication?: object, errors?: string[] }}
  */
 export function updateMedication(id, data) {
+  const existing = getMedication(id)
+  if (!existing) {
+    return { success: false, errors: ['Medication not found'] }
+  }
+
+  const merged = { ...existing, ...data }
+  const validation = validateMedicationInput(merged)
+  if (!validation.valid) {
+    return { success: false, errors: validation.errors }
+  }
+
+  const cleanedTimes = [...new Set(merged.times.map((t) => t.trim()))].sort()
   let updated = null
 
   updateStore(KEYS.MEDICATIONS, (current) => {
     const list = Array.isArray(current) ? current : []
     return list.map((m) => {
       if (m.id !== id) return m
-      updated = { ...m, ...data, id: m.id, updatedAt: new Date().toISOString() }
+      updated = {
+        ...m,
+        ...data,
+        name: merged.name.trim(),
+        dosage: (merged.dosage || merged.dose || '').trim(),
+        dose: (merged.dosage || merged.dose || '').trim(),
+        times: cleanedTimes,
+        id: m.id,
+        createdAt: m.createdAt,
+        updatedAt: new Date().toISOString(),
+      }
       return updated
     })
   })
 
-  return updated
+  return { success: true, medication: updated }
 }
 
 /**
- * Deletes a medication by id.
+ * Deletes a medication.
+ * Soft-deletes so future schedules stop appearing, but past dose logs remain intact.
  * @param {string} id
- * @returns {boolean} True if removed, false if not found.
+ * @returns {boolean} True if removed/soft-deleted.
  */
 export function deleteMedication(id) {
-  let removed = false
+  let found = false
 
   updateStore(KEYS.MEDICATIONS, (current) => {
     const list = Array.isArray(current) ? current : []
-    const next = list.filter((m) => {
-      if (m.id === id) { removed = true; return false }
-      return true
+    return list.map((m) => {
+      if (m.id === id) {
+        found = true
+        return { ...m, deleted: true, updatedAt: new Date().toISOString() }
+      }
+      return m
     })
-    return next
   })
 
-  return removed
+  return found
 }
 
 // ---------------------------------------------------------------------------
-// Schedule engine
+// Schedule Engine
 // ---------------------------------------------------------------------------
 
 /**
- * Returns today's schedule as an array of { medication, scheduledTime, doseLog }
- * sorted by scheduledTime (HH:MM, ascending).
+ * Determines dose status: 'taken' | 'due' | 'upcoming' | 'missed'
  *
- * Only includes medications whose date range covers today and that have
- * at least one time entry.
+ * Status definition:
+ * - 'taken': dose has a valid DoseLog record for today.
+ * - 'due': now is between (scheduled - 15m) and (scheduled + MISSED_THRESHOLD_MINUTES).
+ * - 'upcoming': now is before (scheduled - 15m).
+ * - 'missed': now is more than MISSED_THRESHOLD_MINUTES past scheduled time and not taken.
  *
- * @returns {{ medication: Medication, scheduledTime: string, doseLog: DoseLog|null }[]}
+ * @param {string} scheduledTime - "HH:MM"
+ * @param {object|null} doseLog
+ * @param {Date} [currentTime=new Date()]
+ * @param {number} [thresholdMinutes=MISSED_THRESHOLD_MINUTES]
+ * @returns {'taken'|'due'|'upcoming'|'missed'}
  */
-export function getTodaysSchedule() {
-  const today = getTodayString()
+export function calculateDoseStatus(
+  scheduledTime,
+  doseLog,
+  currentTime = new Date(),
+  thresholdMinutes = MISSED_THRESHOLD_MINUTES
+) {
+  if (doseLog && doseLog.status === 'taken') {
+    return 'taken'
+  }
+
+  const [sHours, sMinutes] = scheduledTime.split(':').map(Number)
+  const scheduledDate = new Date(currentTime)
+  scheduledDate.setHours(sHours, sMinutes, 0, 0)
+
+  const diffMs = currentTime.getTime() - scheduledDate.getTime()
+  const diffMinutes = diffMs / (1000 * 60)
+
+  // If more than thresholdMinutes (60 min) have passed without taking it -> missed
+  if (diffMinutes > thresholdMinutes) {
+    return 'missed'
+  }
+
+  // If currently within 15 minutes before scheduled time or up to 60 minutes after -> due
+  if (diffMinutes >= -15 && diffMinutes <= thresholdMinutes) {
+    return 'due'
+  }
+
+  // If prior to 15 minutes before scheduled time -> upcoming
+  return 'upcoming'
+}
+
+/**
+ * Computes today's schedule for all active medications.
+ * Sorted chronologically by scheduledTime (HH:MM).
+ *
+ * @param {Date} [clock=new Date()] Optional injected clock for deterministic testing.
+ * @returns {Array<{ medication: object, scheduledTime: string, doseLog: object|null, status: string }>}
+ */
+export function getTodaysSchedule(clock = new Date()) {
+  const today = getTodayString(clock)
   const meds = getAllMedications()
   const logs = getDoseLogsForDate(today)
 
   const schedule = []
 
   for (const med of meds) {
-    // Skip if outside date range
     if (med.startDate && med.startDate > today) continue
     if (med.endDate && med.endDate < today) continue
-    // Skip if no times defined
     if (!Array.isArray(med.times) || med.times.length === 0) continue
 
     for (const scheduledTime of med.times) {
-      const doseLog =
-        logs.find(
-          (l) =>
-            l.medicationId === med.id &&
-            l.scheduledTime === scheduledTime &&
-            l.date === today
-        ) ?? null
+      const doseLog = logs.find(
+        (l) =>
+          l.medicationId === med.id &&
+          l.scheduledTime === scheduledTime &&
+          l.date === today &&
+          l.status === 'taken'
+      ) ?? null
 
-      schedule.push({ medication: med, scheduledTime, doseLog })
+      const status = calculateDoseStatus(scheduledTime, doseLog, clock)
+
+      schedule.push({
+        medication: med,
+        scheduledTime,
+        doseLog,
+        status,
+      })
     }
   }
 
-  // Sort by HH:MM ascending
-  schedule.sort((a, b) => a.scheduledTime.localeCompare(b.scheduledTime))
+  // Sort by time ascending, then medication name
+  schedule.sort((a, b) => {
+    const timeCmp = a.scheduledTime.localeCompare(b.scheduledTime)
+    if (timeCmp !== 0) return timeCmp
+    return a.medication.name.localeCompare(b.medication.name)
+  })
 
   return schedule
 }
 
+// ---------------------------------------------------------------------------
+// Dose Logging & Duplicate Prevention
+// ---------------------------------------------------------------------------
+
 /**
- * Logs or updates a dose entry.
- * Prevents duplicate: if a log exists for same med + time + date, it is updated.
+ * Logs a dose as taken.
+ * Duplicate prevention: uniqueness enforced on (medicationId + date + scheduledTime).
  *
  * @param {string} medicationId
- * @param {string} scheduledTime - HH:MM
- * @param {'taken'|'missed'|'skipped'} [status='taken']
- * @returns {DoseLog}
+ * @param {string} scheduledTime - "HH:MM"
+ * @param {Date} [clock=new Date()]
+ * @returns {{ success: boolean, doseLog?: object, error?: string }}
  */
-export function logDose(medicationId, scheduledTime, status = 'taken') {
-  const today = getTodayString()
-  let resultLog = null
+export function logDose(medicationId, scheduledTime, clock = new Date()) {
+  const today = getTodayString(clock)
+  const nowIso = clock.toISOString()
+
+  let duplicateFound = false
+  let newLog = null
 
   updateStore(KEYS.DOSE_LOGS, (current) => {
     const list = Array.isArray(current) ? current : []
 
-    const existingIdx = list.findIndex(
+    const existing = list.find(
       (l) =>
         l.medicationId === medicationId &&
         l.scheduledTime === scheduledTime &&
-        l.date === today
+        l.date === today &&
+        l.status === 'taken'
     )
 
-    if (existingIdx !== -1) {
-      // Update existing entry
-      const updated = {
-        ...list[existingIdx],
-        status,
-        timestamp: new Date().toISOString(),
-      }
-      resultLog = updated
-      const next = [...list]
-      next[existingIdx] = updated
-      return next
+    if (existing) {
+      duplicateFound = true
+      return list
     }
 
-    // Create new entry
-    const newLog = {
+    newLog = {
       id: _genId(),
       medicationId,
       scheduledTime,
       date: today,
-      status,
-      timestamp: new Date().toISOString(),
+      status: 'taken',
+      takenAt: nowIso,
+      timestamp: nowIso,
     }
-    resultLog = newLog
+
     return [...list, newLog]
   })
 
-  return resultLog
+  if (duplicateFound) {
+    return {
+      success: false,
+      error: 'This dose has already been recorded as taken today.',
+    }
+  }
+
+  return { success: true, doseLog: newLog }
 }
 
 /**
  * Returns all dose logs for a given date.
- * @param {string} date - YYYY-MM-DD
- * @returns {DoseLog[]}
+ * @param {string} date - "YYYY-MM-DD"
+ * @returns {Array<object>}
  */
 export function getDoseLogsForDate(date) {
   const logs = getStore(KEYS.DOSE_LOGS) ?? []
-  return logs.filter((l) => l.date === date)
+  return Array.isArray(logs) ? logs.filter((l) => l.date === date) : []
 }
 
 /**
  * Returns all dose logs between startDate and endDate (inclusive).
- * @param {string} startDate - YYYY-MM-DD
- * @param {string} endDate - YYYY-MM-DD
- * @returns {DoseLog[]}
+ * @param {string} startDate - "YYYY-MM-DD"
+ * @param {string} endDate - "YYYY-MM-DD"
+ * @returns {Array<object>}
  */
 export function getDoseLogsForRange(startDate, endDate) {
   const logs = getStore(KEYS.DOSE_LOGS) ?? []
-  return logs.filter((l) => l.date >= startDate && l.date <= endDate)
+  return Array.isArray(logs) ? logs.filter((l) => l.date >= startDate && l.date <= endDate) : []
 }
-
-// ---------------------------------------------------------------------------
-// JSDoc type definitions (not runtime)
-// ---------------------------------------------------------------------------
-
-/**
- * @typedef {{
- *   id: string,
- *   name: string,
- *   activeIngredient: string,
- *   dose: string,
- *   unit: string,
- *   frequency: string,
- *   times: string[],
- *   instructions: string,
- *   clinicianInstructions: string,
- *   startDate: string,
- *   endDate: string|null,
- *   color: string,
- *   createdAt: string,
- *   updatedAt: string,
- * }} Medication
- */
-
-/**
- * @typedef {{
- *   id: string,
- *   medicationId: string,
- *   scheduledTime: string,
- *   date: string,
- *   status: 'taken'|'missed'|'skipped',
- *   timestamp: string,
- * }} DoseLog
- */

@@ -1,18 +1,612 @@
-// src/views/senior.js
-import { t } from '../i18n/index.js'
+// src/views/senior.js — Complete Senior Mode view with schedule, TTS, add/edit/delete, and safe dose logging
 
+import { t, getLocale } from '../i18n/index.js'
+import {
+  getTodaysSchedule,
+  addMedication,
+  updateMedication,
+  deleteMedication,
+  logDose,
+  FREQUENCIES,
+  DEFAULT_FREQUENCY_TIMES,
+} from '../modules/medications.js'
+import { speechService } from '../modules/speech.js'
+import { showModal } from '../components/modal.js'
+import { showToast } from '../components/toast.js'
+
+/**
+ * Format 24h 'HH:MM' into friendly 12h display with AM/PM
+ * e.g. '08:00' -> '8:00 AM', '20:30' -> '8:30 PM'
+ * @param {string} timeStr
+ * @returns {string}
+ */
+function formatTime12h(timeStr) {
+  if (!timeStr) return ''
+  const [hStr, mStr] = timeStr.split(':')
+  let hours = parseInt(hStr, 10)
+  const minutes = mStr || '00'
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  hours = hours % 12 || 12
+  return `${hours}:${minutes} ${ampm}`
+}
+
+/**
+ * Status icon and styling helper
+ * @param {'taken'|'due'|'upcoming'|'missed'} status
+ */
+function getStatusBadge(status) {
+  switch (status) {
+    case 'taken':
+      return {
+        icon: '✅',
+        label: t('senior.taken'),
+        badgeClass: 'badge-taken',
+      }
+    case 'due':
+      return {
+        icon: '⏰',
+        label: t('senior.dueNow'),
+        badgeClass: 'badge-due',
+      }
+    case 'missed':
+      return {
+        icon: '⚠️',
+        label: t('senior.missedDose'),
+        badgeClass: 'badge-missed',
+      }
+    case 'upcoming':
+    default:
+      return {
+        icon: '⏳',
+        label: t('senior.upcoming'),
+        badgeClass: 'badge-upcoming',
+      }
+  }
+}
+
+/**
+ * Main render function for Senior Mode
+ * @param {HTMLElement} container
+ */
 export function renderSenior(container) {
   if (!container) return
+
+  // Build root view skeleton
   container.innerHTML = `
-    <section class="view-container senior-view" aria-labelledby="senior-heading">
-      <div class="view-header">
-        <h1 id="senior-heading" tabindex="-1">${t('senior.title')}</h1>
-        <p class="subtitle">${t('senior.subtitle')}</p>
+    <div class="view-container senior-container" role="region" aria-labelledby="senior-page-heading">
+      <div class="senior-header">
+        <div class="senior-title-group">
+          <h1 id="senior-page-heading" class="senior-heading" tabindex="-1"></h1>
+          <p class="senior-subtitle" id="senior-subtitle-text"></p>
+        </div>
+
+        <div class="senior-header-actions">
+          <button id="btn-read-schedule" class="btn btn-secondary btn-tts" type="button" aria-label="${t('senior.readAloud')}">
+            <span class="btn-icon" aria-hidden="true">🔊</span>
+            <span class="btn-text">${t('senior.readAloud')}</span>
+          </button>
+          <button id="btn-add-med" class="btn btn-primary btn-add" type="button" aria-label="${t('senior.addMed')}">
+            <span class="btn-icon" aria-hidden="true">➕</span>
+            <span class="btn-text">${t('senior.addMed')}</span>
+          </button>
+        </div>
       </div>
-      <div class="card p-6 mt-4">
-        <h2>${t('senior.todaySchedule')}</h2>
-        <p class="text-secondary mt-2">${t('senior.noMeds')}</p>
-      </div>
-    </section>
+
+      <div id="senior-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+      <!-- Schedule Content Area -->
+      <section id="senior-schedule-list" class="senior-schedule" aria-label="${t('senior.todaySchedule')}">
+      </section>
+    </div>
   `
+
+  // Text contents set safely
+  const headingEl = container.querySelector('#senior-page-heading')
+  if (headingEl) headingEl.textContent = t('senior.title')
+
+  const subtitleEl = container.querySelector('#senior-subtitle-text')
+  if (subtitleEl) subtitleEl.textContent = t('senior.subtitle')
+
+  const liveRegion = container.querySelector('#senior-live-region')
+
+  /**
+   * Safe live announcement helper
+   * @param {string} msg
+   */
+  function announce(msg) {
+    if (liveRegion) {
+      liveRegion.textContent = ''
+      setTimeout(() => {
+        liveRegion.textContent = msg
+      }, 50)
+    }
+  }
+
+  /**
+   * Refreshes and renders schedule items safely
+   */
+  function refreshSchedule() {
+    const scheduleListEl = container.querySelector('#senior-schedule-list')
+    if (!scheduleListEl) return
+
+    scheduleListEl.innerHTML = ''
+    const schedule = getTodaysSchedule()
+
+    if (schedule.length === 0) {
+      const emptyCard = document.createElement('div')
+      emptyCard.className = 'card senior-empty-card'
+
+      const emptyIcon = document.createElement('div')
+      emptyIcon.className = 'empty-icon'
+      emptyIcon.setAttribute('aria-hidden', 'true')
+      emptyIcon.textContent = '💊'
+
+      const emptyTitle = document.createElement('h2')
+      emptyTitle.className = 'empty-title'
+      emptyTitle.textContent = t('senior.noMeds')
+
+      const emptySub = document.createElement('p')
+      emptySub.className = 'empty-sub text-secondary'
+      emptySub.textContent = t('senior.noMedsSub')
+
+      const emptyAddBtn = document.createElement('button')
+      emptyAddBtn.className = 'btn btn-primary btn-lg mt-4'
+      emptyAddBtn.type = 'button'
+      emptyAddBtn.textContent = t('senior.addMed')
+      emptyAddBtn.addEventListener('click', () => openMedicationModal(null, refreshSchedule))
+
+      emptyCard.appendChild(emptyIcon)
+      emptyCard.appendChild(emptyTitle)
+      emptyCard.appendChild(emptySub)
+      emptyCard.appendChild(emptyAddBtn)
+      scheduleListEl.appendChild(emptyCard)
+      return
+    }
+
+    // Check if all are taken
+    const allTaken = schedule.every((item) => item.status === 'taken')
+    if (allTaken) {
+      const allDoneBanner = document.createElement('div')
+      allDoneBanner.className = 'card all-done-card mb-4'
+      allDoneBanner.innerHTML = `
+        <div class="all-done-content">
+          <span class="all-done-icon" aria-hidden="true">🎉</span>
+          <div>
+            <h3 class="all-done-title">${t('senior.allDone')}</h3>
+            <p class="all-done-sub text-secondary">${t('senior.allDoneSub')}</p>
+          </div>
+        </div>
+      `
+      scheduleListEl.appendChild(allDoneBanner)
+    }
+
+    // Render cards
+    schedule.forEach((item, index) => {
+      const card = createDoseCard(item, index, refreshSchedule, announce)
+      scheduleListEl.appendChild(card)
+    })
+  }
+
+  // Bind Top Actions
+  const btnAddMed = container.querySelector('#btn-add-med')
+  if (btnAddMed) {
+    btnAddMed.addEventListener('click', () => openMedicationModal(null, refreshSchedule))
+  }
+
+  const btnReadSchedule = container.querySelector('#btn-read-schedule')
+  if (btnReadSchedule) {
+    btnReadSchedule.addEventListener('click', () => {
+      readAloudSchedule(btnReadSchedule)
+    })
+  }
+
+  // Initial draw
+  refreshSchedule()
+}
+
+/**
+ * Creates an individual accessible Dose Card
+ */
+function createDoseCard(item, index, refreshSchedule, announce) {
+  const { medication, scheduledTime, status } = item
+  const badgeInfo = getStatusBadge(status)
+  const isTaken = status === 'taken'
+
+  const card = document.createElement('article')
+  card.className = `card dose-card ${isTaken ? 'dose-card-taken' : ''} ${status === 'due' ? 'dose-card-due' : ''}`
+  card.setAttribute('aria-labelledby', `dose-title-${index}`)
+
+  // Header row (Time + Status)
+  const headerRow = document.createElement('div')
+  headerRow.className = 'dose-card-header'
+
+  const timeEl = document.createElement('div')
+  timeEl.className = 'dose-time'
+  timeEl.innerHTML = `<span class="time-clock-icon" aria-hidden="true">🕒</span> <strong>${formatTime12h(scheduledTime)}</strong>`
+
+  const statusBadge = document.createElement('div')
+  statusBadge.className = `status-badge ${badgeInfo.badgeClass}`
+  statusBadge.setAttribute('role', 'status')
+  statusBadge.innerHTML = `<span aria-hidden="true">${badgeInfo.icon}</span> <span>${badgeInfo.label}</span>`
+
+  headerRow.appendChild(timeEl)
+  headerRow.appendChild(statusBadge)
+  card.appendChild(headerRow)
+
+  // Medication Name & Dosage row
+  const bodySection = document.createElement('div')
+  bodySection.className = 'dose-card-body'
+
+  const titleEl = document.createElement('h2')
+  titleEl.id = `dose-title-${index}`
+  titleEl.className = 'dose-med-name'
+  titleEl.textContent = medication.name
+
+  const dosageEl = document.createElement('p')
+  dosageEl.className = 'dose-med-dosage'
+  dosageEl.textContent = medication.dosage || medication.dose || ''
+
+  bodySection.appendChild(titleEl)
+  bodySection.appendChild(dosageEl)
+
+  // Special instructions (if any)
+  if (medication.instructions) {
+    const instEl = document.createElement('p')
+    instEl.className = 'dose-instructions'
+    instEl.innerHTML = `<span aria-hidden="true">ℹ️</span> `
+    const instText = document.createElement('span')
+    instText.textContent = medication.instructions
+    instEl.appendChild(instText)
+    bodySection.appendChild(instEl)
+  }
+
+  card.appendChild(bodySection)
+
+  // Actions footer
+  const footerRow = document.createElement('div')
+  footerRow.className = 'dose-card-actions'
+
+  // Read Aloud Single Dose Button
+  const btnSpeak = document.createElement('button')
+  btnSpeak.className = 'btn btn-ghost btn-speak-dose'
+  btnSpeak.type = 'button'
+  btnSpeak.setAttribute('aria-label', `${t('senior.readAloud')} ${medication.name}`)
+  btnSpeak.innerHTML = `<span aria-hidden="true">🔊</span> <span class="sr-only">${t('senior.readAloud')}</span>`
+  btnSpeak.addEventListener('click', () => {
+    const speechText = `Take ${medication.name}, ${medication.dosage || medication.dose || ''}, at ${formatTime12h(scheduledTime)}.`
+    speechService.speak(speechText, getLocale())
+  })
+  footerRow.appendChild(btnSpeak)
+
+  // Edit Button
+  const btnEdit = document.createElement('button')
+  btnEdit.className = 'btn btn-ghost btn-edit-dose'
+  btnEdit.type = 'button'
+  btnEdit.setAttribute('aria-label', `${t('senior.editMed')} ${medication.name}`)
+  btnEdit.innerHTML = `<span aria-hidden="true">✏️</span> <span class="sr-only">${t('senior.editMed')}</span>`
+  btnEdit.addEventListener('click', () => {
+    openMedicationModal(medication, refreshSchedule)
+  })
+  footerRow.appendChild(btnEdit)
+
+  // Delete Button
+  const btnDelete = document.createElement('button')
+  btnDelete.className = 'btn btn-ghost btn-delete-dose'
+  btnDelete.type = 'button'
+  btnDelete.setAttribute('aria-label', `${t('senior.deleteMed')} ${medication.name}`)
+  btnDelete.innerHTML = `<span aria-hidden="true">🗑️</span> <span class="sr-only">${t('senior.deleteMed')}</span>`
+  btnDelete.addEventListener('click', async () => {
+    const confirmed = await showModal({
+      title: t('senior.deleteConfirmTitle'),
+      content: t('senior.deleteConfirmBody').replace('{medName}', medication.name),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
+      dangerous: true,
+    })
+    if (confirmed) {
+      deleteMedication(medication.id)
+      announce(`${medication.name} deleted`)
+      showToast(`${medication.name} deleted`, 'info')
+      refreshSchedule()
+    }
+  })
+  footerRow.appendChild(btnDelete)
+
+  // Primary Action: Mark as Taken Button
+  const btnTake = document.createElement('button')
+  btnTake.className = `btn ${isTaken ? 'btn-taken' : 'btn-primary'} btn-take-action`
+  btnTake.type = 'button'
+  btnTake.disabled = isTaken
+
+  if (isTaken) {
+    btnTake.innerHTML = `<span aria-hidden="true">✓</span> <span>${t('senior.taken')}</span>`
+  } else {
+    btnTake.innerHTML = `<span aria-hidden="true">💊</span> <span>${t('senior.markTaken')}</span>`
+    btnTake.addEventListener('click', async () => {
+      // Step 3 Confirmation Dialog
+      const confirmed = await showModal({
+        title: t('senior.confirmTakenTitle'),
+        content: t('senior.confirmTakenQuestion')
+          .replace('{medName}', medication.name)
+          .replace('{dosage}', medication.dosage || medication.dose || '')
+          .replace('{time}', formatTime12h(scheduledTime)),
+        confirmText: t('senior.markTaken'),
+        cancelText: t('common.cancel'),
+      })
+
+      if (confirmed) {
+        const result = logDose(medication.id, scheduledTime)
+        if (result.success) {
+          const successMsg = t('senior.successTakenToast').replace('{medName}', medication.name)
+          announce(successMsg)
+          showToast(successMsg, 'success')
+          refreshSchedule()
+        } else {
+          showToast(t('senior.alreadyTakenToast'), 'warning')
+          refreshSchedule()
+        }
+      }
+    })
+  }
+
+  footerRow.appendChild(btnTake)
+  card.appendChild(footerRow)
+
+  return card
+}
+
+/**
+ * Text-to-Speech logic for reading the entire schedule aloud
+ */
+function readAloudSchedule(buttonEl) {
+  if (!speechService.isAvailable()) {
+    showToast(t('senior.speechUnavailable'), 'warning')
+    return
+  }
+
+  if (speechService.isSpeaking()) {
+    speechService.stop()
+    buttonEl.innerHTML = `<span class="btn-icon" aria-hidden="true">🔊</span><span class="btn-text">${t('senior.readAloud')}</span>`
+    return
+  }
+
+  const schedule = getTodaysSchedule()
+  if (schedule.length === 0) {
+    speechService.speak(t('senior.noMeds'), getLocale())
+    return
+  }
+
+  const lines = [`Today's medication schedule:`]
+  for (const item of schedule) {
+    const timeFormatted = formatTime12h(item.scheduledTime)
+    const statusText = item.status === 'taken' ? 'already taken' : 'not yet taken'
+    lines.push(`${item.medication.name}, ${item.medication.dosage || item.medication.dose}, scheduled for ${timeFormatted}. Status: ${statusText}.`)
+  }
+
+  const fullText = lines.join(' ')
+  buttonEl.innerHTML = `<span class="btn-icon" aria-hidden="true">⏹️</span><span class="btn-text">${t('senior.stopSpeech')}</span>`
+
+  speechService.speak(fullText, getLocale(), {
+    onEnd: () => {
+      buttonEl.innerHTML = `<span class="btn-icon" aria-hidden="true">🔊</span><span class="btn-text">${t('senior.readAloud')}</span>`
+    },
+    onError: () => {
+      buttonEl.innerHTML = `<span class="btn-icon" aria-hidden="true">🔊</span><span class="btn-text">${t('senior.readAloud')}</span>`
+    },
+  })
+}
+
+/**
+ * Add / Edit Medication Accessible Modal Form
+ * @param {object|null} medToEdit
+ * @param {Function} onSaved
+ */
+function openMedicationModal(medToEdit = null, onSaved) {
+  const isEdit = Boolean(medToEdit)
+  const modalContainer = document.getElementById('modal-container')
+  if (!modalContainer) return
+
+  const formWrapper = document.createElement('div')
+  formWrapper.className = 'med-form-wrapper'
+
+  // Pre-fill state
+  let currentTimes = isEdit ? [...medToEdit.times] : ['08:00']
+  let currentFrequency = isEdit ? medToEdit.frequency : FREQUENCIES.ONCE_DAILY
+
+  formWrapper.innerHTML = `
+    <form id="med-form" novalidate>
+      <div class="form-group mb-4">
+        <label for="form-med-name" class="form-label">${t('med.name')} *</label>
+        <input
+          id="form-med-name"
+          name="name"
+          type="text"
+          class="form-input form-input-lg"
+          required
+          maxlength="100"
+          placeholder="${t('med.namePlaceholder')}"
+          value="${isEdit ? escapeHtml(medToEdit.name) : ''}"
+        />
+        <p id="error-name" class="form-error sr-only" role="alert"></p>
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="form-med-dosage" class="form-label">${t('med.dosage')} *</label>
+        <input
+          id="form-med-dosage"
+          name="dosage"
+          type="text"
+          class="form-input form-input-lg"
+          required
+          maxlength="50"
+          placeholder="${t('med.dosagePlaceholder')}"
+          value="${isEdit ? escapeHtml(medToEdit.dosage || medToEdit.dose || '') : ''}"
+        />
+        <p id="error-dosage" class="form-error sr-only" role="alert"></p>
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="form-med-frequency" class="form-label">${t('med.frequency')}</label>
+        <select id="form-med-frequency" class="form-select form-input-lg">
+          <option value="${FREQUENCIES.ONCE_DAILY}">${t('med.frequencies.once_daily')}</option>
+          <option value="${FREQUENCIES.TWICE_DAILY}">${t('med.frequencies.twice_daily')}</option>
+          <option value="${FREQUENCIES.THREE_TIMES_DAILY}">${t('med.frequencies.three_times_daily')}</option>
+          <option value="${FREQUENCIES.CUSTOM}">${t('med.frequencies.custom')}</option>
+        </select>
+      </div>
+
+      <div class="form-group mb-4">
+        <label class="form-label">${t('med.times')} *</label>
+        <div id="times-inputs-container" class="times-list mb-2"></div>
+        <button id="btn-add-time" type="button" class="btn btn-ghost btn-sm">
+          ${t('med.timeAdd')}
+        </button>
+        <p id="error-times" class="form-error sr-only" role="alert"></p>
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="form-med-instructions" class="form-label">${t('med.instructions')}</label>
+        <input
+          id="form-med-instructions"
+          name="instructions"
+          type="text"
+          class="form-input"
+          maxlength="150"
+          placeholder="${t('med.instructionsPlaceholder')}"
+          value="${isEdit ? escapeHtml(medToEdit.instructions || '') : ''}"
+        />
+      </div>
+
+      <div class="form-group mb-4">
+        <label for="form-med-clinician" class="form-label">${t('med.clinicianInstructions')}</label>
+        <textarea
+          id="form-med-clinician"
+          name="clinicianInstructions"
+          class="form-textarea"
+          rows="2"
+          maxlength="300"
+          placeholder="Verified clinician-provided instructions"
+        >${isEdit ? escapeHtml(medToEdit.clinicianInstructions || '') : ''}</textarea>
+      </div>
+
+      <p id="form-general-error" class="form-error text-danger mb-3" style="display:none;"></p>
+    </form>
+  `
+
+  // Select frequency value
+  const selectFreq = formWrapper.querySelector('#form-med-frequency')
+  if (selectFreq) {
+    selectFreq.value = currentFrequency
+  }
+
+  const timesContainer = formWrapper.querySelector('#times-inputs-container')
+
+  function renderTimesInputs() {
+    timesContainer.innerHTML = ''
+    currentTimes.forEach((timeVal, idx) => {
+      const row = document.createElement('div')
+      row.className = 'time-input-row mb-2'
+
+      const input = document.createElement('input')
+      input.type = 'time'
+      input.className = 'form-input time-picker'
+      input.required = true
+      input.value = timeVal
+      input.addEventListener('change', (e) => {
+        currentTimes[idx] = e.target.value
+      })
+
+      const removeBtn = document.createElement('button')
+      removeBtn.type = 'button'
+      removeBtn.className = 'btn btn-ghost btn-remove-time'
+      removeBtn.setAttribute('aria-label', `Remove time ${idx + 1}`)
+      removeBtn.innerHTML = '✖'
+      removeBtn.disabled = currentTimes.length <= 1
+      removeBtn.addEventListener('click', () => {
+        currentTimes.splice(idx, 1)
+        renderTimesInputs()
+      })
+
+      row.appendChild(input)
+      row.appendChild(removeBtn)
+      timesContainer.appendChild(row)
+    })
+  }
+
+  renderTimesInputs()
+
+  // Frequency change automatically populates standard times
+  if (selectFreq) {
+    selectFreq.addEventListener('change', (e) => {
+      const freq = e.target.value
+      currentFrequency = freq
+      if (freq !== FREQUENCIES.CUSTOM && DEFAULT_FREQUENCY_TIMES[freq]) {
+        currentTimes = [...DEFAULT_FREQUENCY_TIMES[freq]]
+        renderTimesInputs()
+      }
+    })
+  }
+
+  // Add time button
+  const btnAddTime = formWrapper.querySelector('#btn-add-time')
+  if (btnAddTime) {
+    btnAddTime.addEventListener('click', () => {
+      currentTimes.push('12:00')
+      renderTimesInputs()
+    })
+  }
+
+  // Open in accessible modal
+  showModal({
+    title: isEdit ? t('med.editTitle') : t('med.addTitle'),
+    content: formWrapper,
+    confirmText: t('med.saveBtn'),
+    cancelText: t('med.cancelBtn'),
+    onConfirm: async () => {
+      const nameInput = formWrapper.querySelector('#form-med-name')
+      const dosageInput = formWrapper.querySelector('#form-med-dosage')
+      const instInput = formWrapper.querySelector('#form-med-instructions')
+      const clinInput = formWrapper.querySelector('#form-med-clinician')
+      const genError = formWrapper.querySelector('#form-general-error')
+
+      const payload = {
+        name: nameInput.value,
+        dosage: dosageInput.value,
+        frequency: currentFrequency,
+        times: currentTimes,
+        instructions: instInput.value,
+        clinicianInstructions: clinInput.value,
+      }
+
+      let res
+      if (isEdit) {
+        res = updateMedication(medToEdit.id, payload)
+      } else {
+        res = addMedication(payload)
+      }
+
+      if (!res.success) {
+        if (genError) {
+          genError.textContent = res.errors.join('; ')
+          genError.style.display = 'block'
+        }
+        showToast(res.errors[0], 'error')
+        return false // Keep modal open
+      }
+
+      showToast(isEdit ? `${payload.name} updated` : `${payload.name} added`, 'success')
+      if (onSaved) onSaved()
+      return true
+    },
+  })
+}
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }

@@ -1,4 +1,4 @@
-// store.js — Typed LocalStorage wrapper with schema versioning
+// store.js — Typed LocalStorage wrapper with schema versioning & quota/corruption resilience
 
 const SCHEMA_VERSION = 1
 
@@ -43,64 +43,80 @@ const DEFAULTS = {
 }
 
 /**
- * Run any needed migrations when schema version changes.
+ * Migration hook when schema changes.
  * @param {number} storedVersion
  */
 function _migrate(storedVersion) {
-  // Future migrations go here as new versions are added.
-  // e.g. if (storedVersion < 2) { ... }
-  console.info(`[store] Migrated from schema v${storedVersion} to v${SCHEMA_VERSION}`)
+  try {
+    // Migration logic for future versions
+    if (storedVersion < 1) {
+      // initial baseline
+    }
+  } catch (err) {
+    console.warn('[store] Migration warning:', err)
+  }
 }
 
 /**
  * Checks schema version, runs migration if needed,
- * initialises missing keys with defaults.
+ * initialises missing keys with defaults safely.
  */
 export function initStore() {
-  const storedVersion = getStore(KEYS.SCHEMA_VERSION)
+  try {
+    const storedVersion = getStore(KEYS.SCHEMA_VERSION)
 
-  if (storedVersion === null) {
-    // Fresh install — write version and all defaults
-    setStore(KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
-  } else if (storedVersion < SCHEMA_VERSION) {
-    _migrate(storedVersion)
-    setStore(KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
-  }
-
-  // Initialise any missing keys with their defaults
-  for (const [key, defaultValue] of Object.entries(DEFAULTS)) {
-    if (getStore(key) === null) {
-      setStore(key, defaultValue)
+    if (storedVersion === null) {
+      setStore(KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
+    } else if (storedVersion < SCHEMA_VERSION) {
+      _migrate(storedVersion)
+      setStore(KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
     }
+
+    for (const [key, defaultValue] of Object.entries(DEFAULTS)) {
+      if (getStore(key) === null) {
+        setStore(key, defaultValue)
+      }
+    }
+  } catch (err) {
+    console.error('[store] initStore error:', err)
   }
 }
 
 /**
- * Parses JSON from localStorage. Returns null on error or missing key.
+ * Parses JSON from localStorage. Handles missing keys or corrupted JSON gracefully.
  * @param {string} key
  * @returns {any|null}
  */
 export function getStore(key) {
   try {
+    if (typeof localStorage === 'undefined') return null
     const raw = localStorage.getItem(key)
-    if (raw === null) return null
+    if (raw === null || raw === undefined) return null
     return JSON.parse(raw)
-  } catch {
-    return null
+  } catch (err) {
+    console.warn(`[store] Corrupted or unreadable JSON for key "${key}". Resetting to default.`, err)
+    // If key is corrupted, restore default safely
+    const fallback = DEFAULTS[key] ?? null
+    if (fallback !== null) {
+      setStore(key, fallback)
+    }
+    return fallback
   }
 }
 
 /**
- * Serialises value to JSON and stores it. Returns true on success.
+ * Serialises value to JSON and stores it. Handles storage quota errors.
  * @param {string} key
  * @param {any} value
  * @returns {boolean}
  */
 export function setStore(key, value) {
   try {
+    if (typeof localStorage === 'undefined') return false
     localStorage.setItem(key, JSON.stringify(value))
     return true
-  } catch {
+  } catch (err) {
+    console.error(`[store] Failed to write key "${key}":`, err)
     return false
   }
 }
@@ -116,7 +132,8 @@ export function updateStore(key, updater) {
     const current = getStore(key)
     const next = updater(current)
     return setStore(key, next)
-  } catch {
+  } catch (err) {
+    console.error(`[store] updateStore error for key "${key}":`, err)
     return false
   }
 }
@@ -125,14 +142,19 @@ export function updateStore(key, updater) {
  * Clears all keys that start with 'nm_'.
  */
 export function clearStore() {
-  const toRemove = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key && key.startsWith('nm_')) {
-      toRemove.push(key)
+  try {
+    if (typeof localStorage === 'undefined') return
+    const toRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('nm_')) {
+        toRemove.push(key)
+      }
     }
+    toRemove.forEach((key) => localStorage.removeItem(key))
+  } catch (err) {
+    console.error('[store] clearStore error:', err)
   }
-  toRemove.forEach((key) => localStorage.removeItem(key))
 }
 
 /**
@@ -163,7 +185,6 @@ export function importData(jsonString) {
       return { success: false, error: 'Invalid backup format: expected an object.' }
     }
 
-    // Write all recognised keys; skip unknown / meta keys
     for (const key of Object.values(KEYS)) {
       if (key === KEYS.SCHEMA_VERSION) continue
       if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -171,9 +192,7 @@ export function importData(jsonString) {
       }
     }
 
-    // Bump schema version to current after import
     setStore(KEYS.SCHEMA_VERSION, SCHEMA_VERSION)
-
     return { success: true }
   } catch (err) {
     return { success: false, error: `Failed to parse backup: ${err.message}` }

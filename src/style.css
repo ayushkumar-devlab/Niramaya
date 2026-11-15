@@ -1053,3 +1053,232 @@ select.form-input {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── 21. Senior Mode Schedule & Dose Cards ─────────────────── */
+.senior-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.senior-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+@media (min-width: 640px) {
+  .senior-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.senior-heading {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--navy);
+  line-height: var(--leading-tight);
+}
+
+[data-senior="true"] .senior-heading {
+  font-size: 2.25rem; /* >= 28px */
+}
+
+.senior-subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  margin-top: var(--space-1);
+}
+
+.senior-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.senior-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Dose Card */
+.dose-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--white);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.dose-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.dose-card-due {
+  border-color: var(--teal);
+  background: linear-gradient(to right, rgba(13, 148, 136, 0.04), var(--white));
+}
+
+.dose-card-taken {
+  opacity: 0.85;
+  background: var(--surface-2);
+  border-color: #cbd5e1;
+}
+
+.dose-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+
+.dose-time {
+  font-size: var(--text-lg);
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.badge-taken {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+}
+
+.badge-due {
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid rgba(13, 148, 136, 0.4);
+}
+
+.badge-upcoming {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.badge-missed {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.dose-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dose-med-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--navy-dark);
+}
+
+[data-senior="true"] .dose-med-name {
+  font-size: 1.875rem; /* ~30px */
+}
+
+.dose-med-dosage {
+  font-size: var(--text-base);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.dose-instructions {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-1);
+}
+
+.dose-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px; /* >= 12px spacing */
+  margin-top: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.btn-take-action {
+  flex-grow: 1;
+  min-height: 60px; /* >= 60x60px */
+  font-size: var(--text-lg);
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-taken {
+  background: var(--surface-2);
+  color: var(--success);
+  border: 2px solid var(--success);
+  cursor: default;
+}
+
+.btn-speak-dose,
+.btn-edit-dose,
+.btn-delete-dose {
+  min-width: 60px; /* >= 60x60px touch target */
+  min-height: 60px;
+  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+}
+
+.senior-empty-card,
+.all-done-card {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.empty-icon,
+.all-done-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-2);
+}
+
+.time-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.btn-remove-time {
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--danger);
+  font-weight: bold;
+}
