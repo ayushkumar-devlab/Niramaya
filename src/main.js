@@ -1,10 +1,11 @@
 import './style.css'
 import { router } from './modules/router.js'
-import { initStore, getStore, setStore, KEYS } from './modules/store.js'
+import { initStore, getStore, KEYS } from './modules/store.js'
 import { t, setLanguage, getLocale, initLocale } from './i18n/index.js'
 import { renderHowToUse } from './views/howToUse.js'
-import { showModal } from './components/modal.js'
 import { showToast } from './components/toast.js'
+import { openWelcomeGuide } from './components/welcome.js'
+import { shouldShowWelcome } from './modules/welcomeState.js'
 import { getSettings, applySettingsToDocument } from './modules/settings.js'
 import { registerConnectivityListeners } from './modules/connectivity.js'
 
@@ -240,23 +241,7 @@ async function init() {
   const connectivity = registerConnectivityListeners(window, (nextIsOnline) => updateOnlineStatus(nextIsOnline))
   isOnline = connectivity.initial
 
-  if (!(getStore(KEYS.SETTINGS) || {}).guideDismissed) {
-    showModal({
-      title: t('guide.welcomeTitle'),
-      content: `<p>${t('guide.welcomeBody')}</p>`,
-      confirmText: t('guide.openGuide'),
-      cancelText: t('guide.notNow'),
-      onConfirm: () => {
-        const settings = getStore(KEYS.SETTINGS) || {}
-        setStore(KEYS.SETTINGS, { ...settings, guideDismissed: true })
-        window.location.hash = '#/how-to-use'
-      },
-      onCancel: () => {
-        const settings = getStore(KEYS.SETTINGS) || {}
-        setStore(KEYS.SETTINGS, { ...settings, guideDismissed: true })
-      },
-    })
-  }
+  if (import.meta.env.MODE !== 'test' && shouldShowWelcome()) openWelcomeGuide({ markSeenOnClose: true })
 }
 
 init().catch(console.error)

@@ -435,6 +435,28 @@ export const hi = {
     medicalNotice: 'यह ऐप आपके डॉक्टर या फार्मासिस्ट का विकल्प नहीं है।',
   },
 
+  welcome: {
+    title: 'निरामय में आपका स्वागत है',
+    greeting: 'नमस्ते',
+    tagline: 'दवाओं को सुरक्षित तरीके से संभालने में आपका भरोसेमंद साथी।',
+    intro: 'दवाओं, खुराक और आपातकालीन जानकारी को एक आसान जगह पर रखें।',
+    chooseLanguage: 'अपनी भाषा चुनें',
+    english: 'English',
+    hindi: 'हिन्दी',
+    kannada: 'ಕನ್ನಡ',
+    stepCounter: '{current} में से {total}',
+    next: 'आगे',
+    back: 'वापस',
+    skip: 'छोड़ें',
+    getStarted: 'शुरू करें',
+    readAloud: 'यह चरण सुनें',
+    finalTitle: 'अब आप शुरू कर सकते हैं',
+    finalData: 'आपका डेटा इसी डिवाइस पर रहता है।',
+    finalOffline: 'लोड होने के बाद निरामय ऑफ़लाइन काम करता है।',
+    finalMedical: 'निरामय आपके डॉक्टर या फार्मासिस्ट का विकल्प नहीं है।',
+    showGuide: 'स्वागत मार्गदर्शिका दिखाएं',
+  },
+
   footer: {
     notMedicalAdvice: 'यह चिकित्सा सलाह नहीं है',
     worksOffline: 'ऑफ़लाइन काम करता है',

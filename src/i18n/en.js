@@ -435,6 +435,28 @@ export const en = {
     medicalNotice: 'This app does not replace your doctor or pharmacist.',
   },
 
+  welcome: {
+    title: 'Welcome to Niramaya',
+    greeting: 'Hello',
+    tagline: 'Your trusted companion for safer medication management.',
+    intro: 'Track medicines, doses, and emergency information in one simple place.',
+    chooseLanguage: 'Choose your language',
+    english: 'English',
+    hindi: 'हिन्दी',
+    kannada: 'ಕನ್ನಡ',
+    stepCounter: '{current} of {total}',
+    next: 'Next',
+    back: 'Back',
+    skip: 'Skip',
+    getStarted: 'Get started',
+    readAloud: 'Read this step aloud',
+    finalTitle: 'You are ready to begin',
+    finalData: 'Your data stays on this device.',
+    finalOffline: 'Niramaya works offline after it has loaded.',
+    finalMedical: 'Niramaya does not replace your doctor or pharmacist.',
+    showGuide: 'Show welcome guide',
+  },
+
   footer: {
     notMedicalAdvice: 'Not medical advice',
     worksOffline: 'Works offline',

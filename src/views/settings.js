@@ -4,6 +4,7 @@ import { getSettings, saveSettings, applySettingsToDocument, TEXT_SIZES } from '
 import { speechService } from '../modules/speech.js'
 import { showModal } from '../components/modal.js'
 import { showToast } from '../components/toast.js'
+import { openWelcomeGuide } from '../components/welcome.js'
 
 const languageOptions = [
   ['en', 'English', 'en'],
@@ -97,6 +98,7 @@ export function renderSettings(container) {
         <h2 id="settings-help-heading">${t('settings.help')}</h2>
         <div class="button-group">
           <a class="btn btn-secondary" href="#/how-to-use">${t('settings.openGuide')}</a>
+          <button id="show-welcome-guide" class="btn btn-secondary" type="button">${t('welcome.showGuide')}</button>
           <a class="btn btn-secondary" href="#/safety">${t('settings.openSafety')}</a>
           <a class="btn btn-ghost" href="#/how-to-use">${t('settings.disclaimer')}</a>
         </div>
@@ -119,6 +121,7 @@ export function renderSettings(container) {
   container.querySelectorAll('input[name="settings-language"]').forEach((input) => {
     input.addEventListener('change', (event) => setLanguage(event.target.value))
   })
+  container.querySelector('#show-welcome-guide')?.addEventListener('click', () => openWelcomeGuide({ markSeenOnClose: false }))
   container.querySelector('#setting-senior-mode')?.addEventListener('change', (event) => save({ seniorMode: event.target.checked }))
   container.querySelector('#setting-high-contrast')?.addEventListener('change', (event) => save({ highContrast: event.target.checked }))
   container.querySelector('#setting-reduce-motion')?.addEventListener('change', (event) => save({ reduceMotion: event.target.value }))

@@ -38,6 +38,7 @@ describe('store.js (LocalStorage wrapper)', () => {
       voiceEnabled: true,
       speechRate: 0.9,
     })
+    expect(getStore(KEYS.WELCOME_SEEN)).toBe(false)
     expect(getStore(KEYS.PROFILE)).toEqual({
       name: '',
       seniorMode: false,

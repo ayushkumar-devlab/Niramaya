@@ -1022,6 +1022,106 @@ select.form-input {
 .modal.modal-dangerous .modal-title { color: var(--danger); }
 .modal.modal-dangerous .modal-header { border-bottom-color: var(--danger-bg); }
 
+/* ── Welcome guide ───────────────────────────────────────── */
+.welcome-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: rgba(10, 20, 40, 0.72);
+}
+.welcome-dialog {
+  position: relative;
+  width: min(100%, 620px);
+  max-height: calc(100dvh - var(--space-8));
+  overflow-y: auto;
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+}
+.welcome-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
+  cursor: pointer;
+}
+.welcome-close:hover,
+.welcome-close:focus-visible { background: var(--surface-2); color: var(--navy); }
+.welcome-progress {
+  margin-bottom: var(--space-4);
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-align: center;
+}
+.welcome-content {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+.welcome-content h2 { margin: 0; color: var(--navy); }
+.welcome-content p { max-width: 52ch; margin: 0; }
+.welcome-logo { width: 56px; height: 56px; object-fit: contain; }
+.welcome-eyebrow { color: var(--teal); font-weight: 800; }
+.welcome-tagline { font-size: var(--text-lg); font-weight: 700; }
+.welcome-step-icon { width: 64px; height: 64px; color: var(--teal); }
+.welcome-language-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+  margin-top: var(--space-3);
+}
+.welcome-language-button {
+  min-height: 60px;
+  padding: var(--space-3);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--navy);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.welcome-language-button.active,
+.welcome-language-button:hover { border-color: var(--teal); background: var(--teal-bg); }
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+.welcome-actions .welcome-back { margin-right: auto; }
+.welcome-actions .btn { min-height: 44px; }
+[data-senior="true"] .welcome-actions .btn,
+[data-senior="true"] .welcome-close { min-height: 60px; }
+[data-senior="true"] .welcome-close { height: 60px; width: 60px; }
+.welcome-medical-notice {
+  width: 100%;
+  padding: var(--space-3);
+  border-left: 4px solid var(--warning);
+  background: var(--warning-bg);
+  text-align: left;
+}
+
 /* ── 17. Utility / Helper Classes ────────────────────────── */
 .sr-only {
   position: absolute;

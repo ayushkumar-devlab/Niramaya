@@ -1,6 +1,7 @@
 import { t, getLocale } from '../i18n/index.js'
 import { speechService } from '../modules/speech.js'
 import { showToast } from '../components/toast.js'
+import { openWelcomeGuide } from '../components/welcome.js'
 
 const STEPS = [1, 2, 3, 4, 5]
 
@@ -13,7 +14,10 @@ export function renderHowToUse(container) {
           <h1 id="guide-heading">${t('guide.title')}</h1>
           <p class="text-secondary">${t('guide.subtitle')}</p>
         </div>
-        <button id="guide-read-aloud" class="btn btn-secondary" type="button">${t('guide.readAloud')}</button>
+        <div class="button-group">
+          <button id="guide-read-aloud" class="btn btn-secondary" type="button">${t('guide.readAloud')}</button>
+          <button id="guide-show-welcome" class="btn btn-secondary" type="button">${t('welcome.showGuide')}</button>
+        </div>
       </div>
       <ol class="guide-steps">
         ${STEPS.map((step) => `
@@ -54,4 +58,5 @@ export function renderHowToUse(container) {
     }
     speechService.speak(text, getLocale())
   })
+  container.querySelector('#guide-show-welcome')?.addEventListener('click', () => openWelcomeGuide({ markSeenOnClose: false }))
 }

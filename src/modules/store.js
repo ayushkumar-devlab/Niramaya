@@ -10,6 +10,7 @@ export const KEYS = {
   EMERGENCY: 'nm_emergency',
   CAREGIVER: 'nm_caregiver',
   SETTINGS: 'nm_settings',
+  WELCOME_SEEN: 'nm_welcome_seen',
   CAREGIVER_NOTES: 'nm_caregiver_notes',
   DOSE_AUDIT_LOGS: 'nm_dose_audit_logs',
 }
@@ -45,6 +46,7 @@ const DEFAULTS = {
     voiceEnabled: true,
     speechRate: 0.9,
   },
+  [KEYS.WELCOME_SEEN]: false,
   [KEYS.CAREGIVER_NOTES]: [],
   [KEYS.DOSE_AUDIT_LOGS]: [],
 }
