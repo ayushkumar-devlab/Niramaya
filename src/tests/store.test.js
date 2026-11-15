@@ -33,6 +33,10 @@ describe('store.js (LocalStorage wrapper)', () => {
       seniorMode: false,
       fontSize: 'normal',
       guideDismissed: false,
+      highContrast: false,
+      reduceMotion: 'system',
+      voiceEnabled: true,
+      speechRate: 0.9,
     })
     expect(getStore(KEYS.PROFILE)).toEqual({
       name: '',
@@ -93,5 +97,15 @@ describe('store.js (LocalStorage wrapper)', () => {
     clearStore()
     expect(globalThis.localStorage.getItem('other_app_key')).toBe('keep_me')
     expect(getStore(KEYS.SETTINGS)).toBeNull()
+  })
+
+  it('rejects invalid backup values without writing them', () => {
+    initStore()
+    const result = importData(JSON.stringify({
+      _schemaVersion: 1,
+      [KEYS.MEDICATIONS]: 'not-an-array',
+    }))
+    expect(result.success).toBe(false)
+    expect(getStore(KEYS.MEDICATIONS)).toEqual([])
   })
 })

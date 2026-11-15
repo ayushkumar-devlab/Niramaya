@@ -171,7 +171,23 @@ export function renderEmergency(container) {
           </div>
         </section>
 
-        <!-- 4. Primary Doctor & Clinic Contacts -->
+        <!-- 4. Emergency Contact -->
+        <section class="card emergency-section-card" aria-labelledby="contact-heading">
+          <h2 id="contact-heading" class="emergency-section-heading">
+            <svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h3l2 5-2 2c1 2 3 4 5 5l2-2 5 2v3c0 1-1 2-2 2C10 21 3 14 3 6c0-1 1-2 2-2z" fill="none" stroke="currentColor" stroke-width="2"/></svg> ${t('emergency.callAction')}
+          </h2>
+          <div class="emergency-section-body mt-2">
+            ${
+              data.emergencyContact && (data.emergencyContact.name || data.emergencyContact.phone)
+                ? `<p><strong>${escapeHtml(data.emergencyContact.name || t('emergency.notSpecified'))}</strong></p>
+                   <p>${escapeHtml(data.emergencyContact.relationship || t('emergency.contactLabel'))}</p>
+                   <p><a href="tel:${escapeHtml((data.emergencyContact.phone || '').replace(/\s+/g, ''))}">${escapeHtml(data.emergencyContact.phone || '')}</a></p>`
+                : `<p class="text-secondary italic">${t('emergency.noContact')}</p>`
+            }
+          </div>
+        </section>
+
+        <!-- 5. Primary Doctor & Clinic Contacts -->
         <section class="card emergency-section-card col-span-full" aria-labelledby="doctor-heading">
           <h2 id="doctor-heading" class="emergency-section-heading">
             <span aria-hidden="true">👨‍⚕️</span> ${t('emergency.gp')}

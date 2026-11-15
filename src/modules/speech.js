@@ -73,12 +73,23 @@ class SpeechService {
    * @param {string} text
    * @param {string} [lang='en']
    * @param {object} [callbacks]
+   * @param {number} [callbacks.rate]
    * @param {Function} [callbacks.onStart]
    * @param {Function} [callbacks.onEnd]
    * @param {Function} [callbacks.onError]
    * @returns {boolean} True if speech started, false if unavailable.
    */
   speak(text, lang = 'en', callbacks = {}) {
+    let speechRate = callbacks.rate
+    try {
+      const settings = typeof localStorage !== 'undefined'
+        ? JSON.parse(localStorage.getItem('nm_settings') || '{}')
+        : {}
+      if (settings.voiceEnabled === false) return false
+      if (speechRate === undefined && Number.isFinite(settings.speechRate)) speechRate = settings.speechRate
+    } catch (_) {
+      // Speech remains available when settings cannot be read.
+    }
     if (!this.synth || !text) {
       if (callbacks.onError) callbacks.onError(new Error('Speech synthesis not available'))
       return false
@@ -90,7 +101,7 @@ class SpeechService {
     try {
       const utterance = new SpeechSynthesisUtterance(text)
       utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'kn' ? 'kn-IN' : 'en-IN'
-      utterance.rate = 0.9 // Slightly slower for elderly clarity
+      utterance.rate = Number.isFinite(speechRate) ? Math.min(1.2, Math.max(0.7, speechRate)) : 0.9
       utterance.pitch = 1.0
 
       const voice = this._findVoice(lang)

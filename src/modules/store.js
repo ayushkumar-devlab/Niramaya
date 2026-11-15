@@ -40,6 +40,10 @@ const DEFAULTS = {
     seniorMode: false,
     fontSize: 'normal',
     guideDismissed: false,
+    highContrast: false,
+    reduceMotion: 'system',
+    voiceEnabled: true,
+    speechRate: 0.9,
   },
   [KEYS.CAREGIVER_NOTES]: [],
   [KEYS.DOSE_AUDIT_LOGS]: [],
@@ -182,8 +186,28 @@ export function importData(jsonString) {
   try {
     const data = JSON.parse(jsonString)
 
-    if (typeof data !== 'object' || data === null) {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
       return { success: false, error: 'Invalid backup format: expected an object.' }
+    }
+    if (typeof data._schemaVersion !== 'number' || data._schemaVersion < 1) {
+      return { success: false, error: 'Invalid backup schema version.' }
+    }
+
+    const expectedTypes = {
+      [KEYS.MEDICATIONS]: 'array',
+      [KEYS.DOSE_LOGS]: 'array',
+      [KEYS.PROFILE]: 'object',
+      [KEYS.EMERGENCY]: 'object',
+      [KEYS.CAREGIVER]: 'object',
+      [KEYS.SETTINGS]: 'object',
+      [KEYS.CAREGIVER_NOTES]: 'array',
+      [KEYS.DOSE_AUDIT_LOGS]: 'array',
+    }
+    for (const [key, type] of Object.entries(expectedTypes)) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        const valid = type === 'array' ? Array.isArray(data[key]) : data[key] && typeof data[key] === 'object' && !Array.isArray(data[key])
+        if (!valid) return { success: false, error: `Invalid value for ${key}.` }
+      }
     }
 
     for (const key of Object.values(KEYS)) {

@@ -4,6 +4,7 @@ import { initStore, getStore, setStore, KEYS } from './modules/store.js'
 import { t, setLanguage, getLocale, initLocale } from './i18n/index.js'
 import { renderHowToUse } from './views/howToUse.js'
 import { showModal } from './components/modal.js'
+import { getSettings, saveSettings, applySettingsToDocument, nextTextSize } from './modules/settings.js'
 
 // ─── View placeholders (dynamic imports with fallback) ───────────────────────
 let renderSenior, renderCaregiver, renderEmergency, renderDoseDecision, renderSafetyChecker, renderSettings
@@ -19,6 +20,7 @@ function iconSvg(name) {
     settings: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0-5v2m0 12v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M3 12h2m14 0h2M4.9 19.1l1.4-1.4M18 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     guide: '<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h7M8 12h7M8 16h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
     globe: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16M12 4c2 2.2 3 4.8 3 8s-1 5.8-3 8c-2-2.2-3-4.8-3-8s1-5.8 3-8z" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+    textSize: '<path d="M4 19 9 5l5 14M6 14h6M16 8h5M18.5 8v11M16 19h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   }
   return `<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.guide}</svg>`
 }
@@ -44,13 +46,11 @@ function buildAppShell() {
 <a class="skip-link" href="#app-main">${t('a11y.skipToMain')}</a>
 <header id="app-header" role="banner">
   <div class="header-inner">
+   <div class="header-top">
     <a class="header-brand" href="#/senior" aria-label="${t('a11y.logo')}">
       <img class="brand-icon" src="/logo.svg" alt="" width="40" height="40">
       <span class="brand-name">Niramaya</span>
     </a>
-    <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
-      ${[['senior','senior'],['dose-decision','dose'],['caregiver','caregiver'],['emergency','emergency'],['safety','safety'],['how-to-use','guide'],['settings','settings']].map(([route, icon]) => `<a href="#/${route}" class="nav-link" data-route="${route}">${iconSvg(icon)}<span>${t(`nav.${route === 'dose-decision' ? 'doseDecision' : route === 'how-to-use' ? 'howToUse' : route}`)}</span></a>`).join('')}
-    </nav>
     <div class="header-tools">
     <span id="online-status" class="status-chip" role="status">${iconSvg('globe')}<span>${isOnline ? t('a11y.online') : t('a11y.offline')}</span></span>
     <label class="language-selector">${iconSvg('globe')}
@@ -61,11 +61,16 @@ function buildAppShell() {
         <option value="kn" lang="kn">ಕನ್ನಡ</option>
       </select>
     </label>
-    <button id="senior-mode-toggle" class="btn-ghost senior-toggle" aria-pressed="false" aria-label="${t('a11y.toggleSeniorMode')}">
-      <span class="toggle-icon">👴</span>
-    </button>
+    <div class="text-size-control" role="group" aria-label="${t('settings.textSize')}">
+      ${iconSvg('textSize')}
+      <button id="text-size-decrease" type="button" aria-label="${t('settings.decreaseText')}" title="${t('settings.decreaseText')}">A−</button>
+      <button id="text-size-increase" type="button" aria-label="${t('settings.increaseText')}" title="${t('settings.increaseText')}">A+</button>
     </div>
-  </div>
+    </div>
+   </div>
+   <nav id="app-desktop-nav" aria-label="${t('a11y.mainNavigation')}">
+      ${[['senior','senior'],['dose-decision','dose'],['caregiver','caregiver'],['emergency','emergency'],['safety','safety'],['how-to-use','guide'],['settings','settings']].map(([route, icon]) => `<a href="#/${route}" class="nav-link" data-route="${route}">${iconSvg(icon)}<span>${t(`nav.${route === 'dose-decision' ? 'doseDecision' : route === 'how-to-use' ? 'howToUse' : route}`)}</span></a>`).join('')}
+    </nav>
 </header>
 
 <main id="app-main" role="main" tabindex="-1">
@@ -138,8 +143,16 @@ function applyLocale() {
     selector.value = getLocale()
     selector.setAttribute('aria-label', t('settings.language'))
   }
-  const seniorToggle = document.getElementById('senior-mode-toggle')
-  if (seniorToggle) seniorToggle.setAttribute('aria-label', t('a11y.toggleSeniorMode'))
+  const textSizeControl = document.querySelector('.text-size-control')
+  if (textSizeControl) {
+    textSizeControl.setAttribute('aria-label', t('settings.textSize'))
+    const decrease = document.getElementById('text-size-decrease')
+    const increase = document.getElementById('text-size-increase')
+    decrease?.setAttribute('aria-label', t('settings.decreaseText'))
+    decrease?.setAttribute('title', t('settings.decreaseText'))
+    increase?.setAttribute('aria-label', t('settings.increaseText'))
+    increase?.setAttribute('title', t('settings.increaseText'))
+  }
   const status = document.querySelector('#online-status span:last-child')
   if (status) status.textContent = isOnline ? t('a11y.online') : t('a11y.offline')
   const footer = document.querySelector('.app-footer')
@@ -150,17 +163,10 @@ function applyLocale() {
 function applySettings() {
   try {
     const settings = getStore(KEYS.SETTINGS) || {}
-    const html = document.documentElement
-
-    if (settings.seniorMode) {
-      html.setAttribute('data-senior', 'true')
-    } else {
-      html.removeAttribute('data-senior')
-    }
-
+    applySettingsToDocument(settings)
     const lang = settings.language || getLocale() || 'en'
-    html.setAttribute('data-lang', lang)
-    html.setAttribute('lang', lang)
+    document.documentElement.setAttribute('data-lang', lang)
+    document.documentElement.setAttribute('lang', lang)
   } catch (e) {
     // Store may not be ready yet; apply defaults
     document.documentElement.setAttribute('data-lang', 'en')
@@ -198,30 +204,16 @@ async function init() {
   // 7. Set initial nav active state
   updateNavActiveState()
 
-  // 8. Senior Mode toggle
-  const toggleBtn = document.getElementById('senior-mode-toggle')
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      const html = document.documentElement
-      const isSenior = html.hasAttribute('data-senior')
-      if (isSenior) {
-        html.removeAttribute('data-senior')
-        toggleBtn.setAttribute('aria-pressed', 'false')
-      } else {
-        html.setAttribute('data-senior', 'true')
-        toggleBtn.setAttribute('aria-pressed', 'true')
-      }
-
-      // Persist to store if available
-      const settings = getStore(KEYS.SETTINGS) || {}
-      setStore(KEYS.SETTINGS, { ...settings, seniorMode: !isSenior })
-    })
-  }
-
   const languageSelector = document.getElementById('language-selector')
   if (languageSelector) {
     languageSelector.addEventListener('change', (event) => setLanguage(event.target.value))
   }
+  const changeTextSize = (direction) => {
+      const settings = getSettings()
+      saveSettings({ fontSize: nextTextSize(settings.fontSize || 'normal', direction) })
+  }
+  document.getElementById('text-size-decrease')?.addEventListener('click', () => changeTextSize('down'))
+  document.getElementById('text-size-increase')?.addEventListener('click', () => changeTextSize('up'))
 
   // 9. Register Service Worker with root scope
   if ('serviceWorker' in navigator) {
@@ -234,6 +226,10 @@ async function init() {
   document.addEventListener('localechange', () => {
     applySettings()
     applyLocale()
+    router.rerender()
+  })
+  document.addEventListener('settingschange', () => {
+    applySettings()
     router.rerender()
   })
 
