@@ -120,16 +120,19 @@ export const en = {
   },
 
   caregiver: {
-    title: 'Caregiver Dashboard',
+    title: 'CareCircle Dashboard',
     pin: 'PIN',
     pinEntry: 'Enter Caregiver PIN',
-    adherence: 'Adherence',
-    missedHistory: 'Missed Dose History',
-    notes: 'Notes',
+    pinNotice: 'Please enter your 4-digit caregiver PIN to access monitoring records.',
+    pinInvalid: 'Incorrect PIN. Please try again.',
+    pinDisclaimer: 'Notice: This PIN provides a local browser privacy barrier for convenience, not high-security authentication.',
+    adherence: '7-Day Adherence',
+    missedHistory: 'Missed & Unconfirmed Doses',
+    notes: 'Caregiver Observations',
     printReport: 'Print Report',
     sevenDay: '7-Day Overview',
-    addNote: 'Add Note',
-    noNotes: 'No notes added yet.',
+    addNote: '+ Add Observation',
+    noNotes: 'No caregiver notes recorded yet.',
   },
 
   emergency: {
