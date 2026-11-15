@@ -1,16 +1,510 @@
-// src/views/emergency.js
+// src/views/emergency.js — Dedicated High-Contrast Emergency Snapshot (Swasthya Card)
+
 import { t } from '../i18n/index.js'
+import {
+  getEmergencySnapshot,
+  saveEmergencySnapshot,
+  ALLERGY_STATUSES,
+  isValidPhoneNumber,
+} from '../modules/emergency.js'
+import { showModal } from '../components/modal.js'
+import { showToast } from '../components/toast.js'
 
 export function renderEmergency(container) {
   if (!container) return
+
+  const data = getEmergencySnapshot()
+  const hasEmergencyContact = Boolean(
+    data.emergencyContact && data.emergencyContact.name && data.emergencyContact.phone
+  )
+  const contactPhone = hasEmergencyContact ? data.emergencyContact.phone.trim() : ''
+  const cleanTelHref = contactPhone ? `tel:${contactPhone.replace(/\s+/g, '')}` : '#'
+
+  // Allergy status display
+  let allergyDisplayClass = 'allergy-badge-unknown'
+  let allergyText = t('emergency.allergyUnknown')
+  if (data.allergyStatus === ALLERGY_STATUSES.NO_KNOWN) {
+    allergyDisplayClass = 'allergy-badge-none'
+    allergyText = t('emergency.noKnownAllergies')
+  } else if (
+    data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES &&
+    data.allergiesList &&
+    data.allergiesList.length > 0
+  ) {
+    allergyDisplayClass = 'allergy-badge-has'
+    allergyText = data.allergiesList.join(', ')
+  }
+
   container.innerHTML = `
-    <section class="view-container emergency-view" aria-labelledby="emergency-heading">
-      <div class="view-header">
-        <h1 id="emergency-heading" tabindex="-1">${t('emergency.title')}</h1>
+    <div class="view-container emergency-container" role="region" aria-labelledby="emergency-card-title">
+      <!-- High-Contrast Emergency Banner Header -->
+      <header class="emergency-hero-banner" role="banner">
+        <div class="emergency-badge-lead">
+          <span class="emergency-pulse-icon" aria-hidden="true">🚨</span>
+          <span>${t('emergency.badgeTitle')}</span>
+        </div>
+        <h1 id="emergency-card-title" class="emergency-patient-name" tabindex="-1">
+          ${escapeHtml(data.patientName || 'Medical Emergency Card')}
+        </h1>
+        <div class="emergency-vitals-row mt-2">
+          ${data.age ? `<span class="vital-pill"><strong>Age:</strong> ${escapeHtml(data.age)}</span>` : ''}
+          ${data.bloodType ? `<span class="vital-pill blood-pill"><strong>Blood:</strong> ${escapeHtml(data.bloodType)}</span>` : ''}
+          <span class="vital-pill ${allergyDisplayClass}"><strong>Allergies:</strong> ${escapeHtml(allergyText)}</span>
+        </div>
+      </header>
+
+      <!-- Primary Emergency Action: Large Accessible Call Button -->
+      <section class="emergency-call-section mt-4 no-print" aria-label="Emergency Call Action">
+        ${
+          hasEmergencyContact
+            ? `
+          <a
+            id="btn-call-emergency"
+            href="${cleanTelHref}"
+            class="btn btn-emergency-call"
+            aria-label="Call emergency contact ${escapeHtml(data.emergencyContact.name)} at ${escapeHtml(data.emergencyContact.phone)}"
+          >
+            <span class="call-icon" aria-hidden="true">📞</span>
+            <div class="call-text-group">
+              <span class="call-lead-label">Tap to Call Emergency Contact</span>
+              <span class="call-contact-name">${escapeHtml(data.emergencyContact.name)} (${escapeHtml(data.emergencyContact.relationship || 'Contact')})</span>
+              <span class="call-phone-number">${escapeHtml(data.emergencyContact.phone)}</span>
+            </div>
+          </a>
+        `
+            : `
+          <div class="card warning-contact-missing p-4 text-center">
+            <span class="text-danger font-bold">⚠️ No Emergency Contact Configured</span>
+            <p class="text-secondary text-sm mt-1">Add an emergency contact so paramedics or helpers can reach your family immediately.</p>
+            <button id="btn-quick-add-contact" class="btn btn-primary btn-sm mt-3">
+              + Add Emergency Contact
+            </button>
+          </div>
+        `
+        }
+      </section>
+
+      <!-- Top Actions Bar -->
+      <div class="emergency-actions-bar mt-4 no-print">
+        <button id="btn-edit-emergency" class="btn btn-secondary btn-sm" type="button">
+          ✏️ ${t('emergency.editInfo')}
+        </button>
+        <button id="btn-print-emergency" class="btn btn-ghost btn-sm" type="button">
+          🖨️ ${t('caregiver.printReport')}
+        </button>
       </div>
-      <div class="card p-6 mt-4">
-        <p class="text-secondary">${t('emergency.noData')}</p>
+
+      <!-- Medical Sections Grid -->
+      <div class="emergency-sections-grid mt-4">
+        <!-- 1. Known Medical Conditions -->
+        <section class="card emergency-section-card" aria-labelledby="conditions-heading">
+          <h2 id="conditions-heading" class="emergency-section-heading">
+            <span aria-hidden="true">🩺</span> ${t('emergency.conditions')}
+          </h2>
+          <div class="emergency-section-body mt-2">
+            ${
+              data.conditions && data.conditions.length > 0
+                ? `<ul class="medical-tags-list">
+                    ${data.conditions.map((c) => `<li class="medical-tag condition-tag">${escapeHtml(c)}</li>`).join('')}
+                  </ul>`
+                : `<p class="text-secondary italic">${t('emergency.noConditionsRecorded')}</p>`
+            }
+          </div>
+        </section>
+
+        <!-- 2. Allergies Details -->
+        <section class="card emergency-section-card" aria-labelledby="allergies-heading">
+          <h2 id="allergies-heading" class="emergency-section-heading">
+            <span aria-hidden="true">⚠️</span> ${t('emergency.allergies')}
+          </h2>
+          <div class="emergency-section-body mt-2">
+            <p class="font-bold ${data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES ? 'text-danger' : ''}">
+              ${escapeHtml(allergyText)}
+            </p>
+            ${
+              data.allergyStatus === ALLERGY_STATUSES.UNKNOWN
+                ? `<p class="text-secondary text-xs mt-1">⚠️ Note: Allergy status has not been confirmed. Paramedics must exercise caution.</p>`
+                : ''
+            }
+          </div>
+        </section>
+
+        <!-- 3. Current Medications (Auto-synchronized from store) -->
+        <section class="card emergency-section-card col-span-full" aria-labelledby="medications-heading">
+          <h2 id="medications-heading" class="emergency-section-heading">
+            <span aria-hidden="true">💊</span> Current Prescriptions (${data.currentMedications.length})
+          </h2>
+          <div class="emergency-section-body mt-2">
+            ${
+              data.currentMedications && data.currentMedications.length > 0
+                ? `
+                <div class="table-responsive">
+                  <table class="table-clean emergency-med-table">
+                    <thead>
+                      <tr>
+                        <th>Medication</th>
+                        <th>Dosage</th>
+                        <th>Times</th>
+                        <th>Instructions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${data.currentMedications
+                        .map(
+                          (m) => `
+                        <tr>
+                          <td><strong>${escapeHtml(m.name)}</strong></td>
+                          <td><span class="badge badge-due">${escapeHtml(m.dosage)}</span></td>
+                          <td>${m.times && m.times.length > 0 ? m.times.join(', ') : 'Daily'}</td>
+                          <td class="text-secondary text-sm">${escapeHtml(m.instructions || 'Standard dosing')}</td>
+                        </tr>
+                      `
+                        )
+                        .join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `
+                : `<p class="text-secondary italic">No active prescriptions currently registered.</p>`
+            }
+          </div>
+        </section>
+
+        <!-- 4. Primary Doctor & Clinic Contacts -->
+        <section class="card emergency-section-card col-span-full" aria-labelledby="doctor-heading">
+          <h2 id="doctor-heading" class="emergency-section-heading">
+            <span aria-hidden="true">👨‍⚕️</span> ${t('emergency.gp')}
+          </h2>
+          <div class="emergency-section-body mt-2">
+            ${
+              data.primaryDoctor && (data.primaryDoctor.name || data.primaryDoctor.phone)
+                ? `
+                <div class="doctor-contact-box">
+                  <p><strong>Doctor:</strong> ${escapeHtml(data.primaryDoctor.name || 'Not specified')}</p>
+                  ${data.primaryDoctor.clinic ? `<p><strong>Clinic:</strong> ${escapeHtml(data.primaryDoctor.clinic)}</p>` : ''}
+                  ${
+                    data.primaryDoctor.phone
+                      ? `<p><strong>Phone:</strong> <a href="tel:${data.primaryDoctor.phone.replace(/\s+/g, '')}" class="text-teal font-bold">${escapeHtml(data.primaryDoctor.phone)}</a></p>`
+                      : ''
+                  }
+                </div>
+              `
+                : `<p class="text-secondary italic">Primary doctor information not yet specified.</p>`
+            }
+          </div>
+        </section>
       </div>
-    </section>
+
+      <!-- Offline Availability & Device Privacy Notice -->
+      <footer class="card emergency-privacy-footer mt-6 no-print" role="note">
+        <div class="privacy-flex">
+          <span class="privacy-icon" aria-hidden="true">🛡️</span>
+          <div>
+            <h3 class="privacy-title">Offline & Local Device Notice</h3>
+            <p class="privacy-text text-secondary">
+              This card is cached on this device and remains accessible completely offline. All health data is kept strictly inside local browser storage and is never transmitted over the internet.
+              <em>Note: Anyone with physical access to this unlocked device can view this emergency card.</em>
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
   `
+
+  // Wire Edit Button
+  const btnEdit = container.querySelector('#btn-edit-emergency')
+  if (btnEdit) {
+    btnEdit.addEventListener('click', () => {
+      openEmergencyEditModal(data, () => renderEmergency(container))
+    })
+  }
+
+  // Quick Add Contact Button
+  const btnQuickAdd = container.querySelector('#btn-quick-add-contact')
+  if (btnQuickAdd) {
+    btnQuickAdd.addEventListener('click', () => {
+      openEmergencyEditModal(data, () => renderEmergency(container))
+    })
+  }
+
+  // Wire Print Button
+  const btnPrint = container.querySelector('#btn-print-emergency')
+  if (btnPrint) {
+    btnPrint.addEventListener('click', () => {
+      window.print()
+    })
+  }
+}
+
+/**
+ * Edit Emergency Information Modal
+ */
+function openEmergencyEditModal(data, onSaved) {
+  const wrapper = document.createElement('div')
+  wrapper.className = 'emergency-form-wrapper'
+
+  const allergiesCsv =
+    data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES && data.allergiesList
+      ? data.allergiesList.join(', ')
+      : ''
+  const conditionsCsv = data.conditions ? data.conditions.join(', ') : ''
+
+  wrapper.innerHTML = `
+    <form id="emergency-edit-form" novalidate>
+      <div class="form-group mb-3">
+        <label for="form-em-name" class="form-label">${t('emergency.patientName')} *</label>
+        <input
+          id="form-em-name"
+          type="text"
+          class="form-input"
+          required
+          placeholder="e.g. Anand Murthy"
+          value="${escapeHtml(data.patientName || '')}"
+        />
+      </div>
+
+      <div class="form-row-2 mb-3">
+        <div class="form-group">
+          <label for="form-em-age" class="form-label">Age</label>
+          <input
+            id="form-em-age"
+            type="number"
+            class="form-input"
+            placeholder="e.g. 72"
+            value="${escapeHtml(data.age || '')}"
+          />
+        </div>
+        <div class="form-group">
+          <label for="form-em-blood" class="form-label">${t('emergency.blood')}</label>
+          <select id="form-em-blood" class="form-select">
+            <option value="">-- Choose Blood Group --</option>
+            ${['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-', 'Unknown']
+              .map(
+                (bg) =>
+                  `<option value="${bg}" ${data.bloodType === bg ? 'selected' : ''}>${bg}</option>`
+              )
+              .join('')}
+          </select>
+        </div>
+      </div>
+
+      <!-- Allergy Status Fieldset -->
+      <div class="form-group mb-3">
+        <label class="form-label font-bold">${t('emergency.allergies')}</label>
+        <div class="radio-group-vertical mt-1">
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="allergyStatusRadio"
+              value="${ALLERGY_STATUSES.UNKNOWN}"
+              ${data.allergyStatus === ALLERGY_STATUSES.UNKNOWN ? 'checked' : ''}
+            />
+            <span>⚠️ Unknown / Not Evaluated</span>
+          </label>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="allergyStatusRadio"
+              value="${ALLERGY_STATUSES.NO_KNOWN}"
+              ${data.allergyStatus === ALLERGY_STATUSES.NO_KNOWN ? 'checked' : ''}
+            />
+            <span>✅ No Known Allergies</span>
+          </label>
+          <label class="radio-label">
+            <input
+              type="radio"
+              name="allergyStatusRadio"
+              value="${ALLERGY_STATUSES.HAS_ALLERGIES}"
+              ${data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES ? 'checked' : ''}
+            />
+            <span>🚨 Has Specific Allergies:</span>
+          </label>
+        </div>
+        <input
+          id="form-em-allergies-list"
+          type="text"
+          class="form-input mt-2"
+          placeholder="e.g. Penicillin, Peanuts, Sulfa drugs (comma separated)"
+          value="${escapeHtml(allergiesCsv)}"
+          style="${data.allergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES ? '' : 'display:none;'}"
+        />
+      </div>
+
+      <!-- Medical Conditions -->
+      <div class="form-group mb-3">
+        <label for="form-em-conditions" class="form-label">${t('emergency.conditions')} (comma separated)</label>
+        <input
+          id="form-em-conditions"
+          type="text"
+          class="form-input"
+          placeholder="e.g. Hypertension, Type 2 Diabetes, Glaucoma"
+          value="${escapeHtml(conditionsCsv)}"
+        />
+      </div>
+
+      <hr class="mt-4 mb-4" />
+      <h3 class="font-bold text-navy mb-2">Emergency Contact Information</h3>
+
+      <div class="form-group mb-3">
+        <label for="form-em-contact-name" class="form-label">Contact Full Name</label>
+        <input
+          id="form-em-contact-name"
+          type="text"
+          class="form-input"
+          placeholder="e.g. Priya Murthy (Daughter)"
+          value="${escapeHtml(data.emergencyContact?.name || '')}"
+        />
+      </div>
+
+      <div class="form-row-2 mb-3">
+        <div class="form-group">
+          <label for="form-em-contact-phone" class="form-label">Contact Phone Number</label>
+          <input
+            id="form-em-contact-phone"
+            type="tel"
+            class="form-input"
+            placeholder="e.g. +91 98765 43210"
+            value="${escapeHtml(data.emergencyContact?.phone || '')}"
+          />
+        </div>
+        <div class="form-group">
+          <label for="form-em-contact-rel" class="form-label">Relationship</label>
+          <input
+            id="form-em-contact-rel"
+            type="text"
+            class="form-input"
+            placeholder="e.g. Daughter, Spouse, Son"
+            value="${escapeHtml(data.emergencyContact?.relationship || '')}"
+          />
+        </div>
+      </div>
+
+      <hr class="mt-4 mb-4" />
+      <h3 class="font-bold text-navy mb-2">${t('emergency.gp')}</h3>
+
+      <div class="form-row-2 mb-3">
+        <div class="form-group">
+          <label for="form-em-doctor-name" class="form-label">Doctor's Name</label>
+          <input
+            id="form-em-doctor-name"
+            type="text"
+            class="form-input"
+            placeholder="e.g. Dr. K. Rao"
+            value="${escapeHtml(data.primaryDoctor?.name || '')}"
+          />
+        </div>
+        <div class="form-group">
+          <label for="form-em-doctor-phone" class="form-label">Doctor's Phone</label>
+          <input
+            id="form-em-doctor-phone"
+            type="tel"
+            class="form-input"
+            placeholder="e.g. +91 80 2345 6789"
+            value="${escapeHtml(data.primaryDoctor?.phone || '')}"
+          />
+        </div>
+      </div>
+    </form>
+  `
+
+  const radioGroup = wrapper.querySelectorAll('input[name="allergyStatusRadio"]')
+  const allergiesInput = wrapper.querySelector('#form-em-allergies-list')
+
+  radioGroup.forEach((r) => {
+    r.addEventListener('change', (e) => {
+      if (e.target.value === ALLERGY_STATUSES.HAS_ALLERGIES) {
+        allergiesInput.style.display = 'block'
+        allergiesInput.focus()
+      } else {
+        allergiesInput.style.display = 'none'
+      }
+    })
+  })
+
+  showModal({
+    title: t('emergency.editInfo'),
+    content: wrapper,
+    confirmText: t('common.save'),
+    cancelText: t('common.cancel'),
+    onConfirm: async () => {
+      const patientName = wrapper.querySelector('#form-em-name').value.trim()
+      const age = wrapper.querySelector('#form-em-age').value.trim()
+      const bloodType = wrapper.querySelector('#form-em-blood').value
+      const selectedAllergyStatus =
+        wrapper.querySelector('input[name="allergyStatusRadio"]:checked')?.value ||
+        ALLERGY_STATUSES.UNKNOWN
+      const allergiesRaw = allergiesInput.value
+      const conditionsRaw = wrapper.querySelector('#form-em-conditions').value
+
+      const contactName = wrapper.querySelector('#form-em-contact-name').value.trim()
+      const contactPhone = wrapper.querySelector('#form-em-contact-phone').value.trim()
+      const contactRel = wrapper.querySelector('#form-em-contact-rel').value.trim()
+
+      const doctorName = wrapper.querySelector('#form-em-doctor-name').value.trim()
+      const doctorPhone = wrapper.querySelector('#form-em-doctor-phone').value.trim()
+
+      // Validate contact phone if entered
+      if (contactPhone && !isValidPhoneNumber(contactPhone)) {
+        showToast('Please enter a valid emergency contact phone number.', 'error')
+        return false
+      }
+
+      // Validate doctor phone if entered
+      if (doctorPhone && !isValidPhoneNumber(doctorPhone)) {
+        showToast("Please enter a valid primary doctor's phone number.", 'error')
+        return false
+      }
+
+      const allergiesList =
+        selectedAllergyStatus === ALLERGY_STATUSES.HAS_ALLERGIES
+          ? allergiesRaw
+              .split(',')
+              .map((a) => a.trim())
+              .filter(Boolean)
+          : []
+
+      const conditionsList = conditionsRaw
+        .split(',')
+        .map((c) => c.trim())
+        .filter(Boolean)
+
+      const payload = {
+        patientName,
+        age,
+        bloodType,
+        allergyStatus: selectedAllergyStatus,
+        allergiesList,
+        conditions: conditionsList,
+        emergencyContact: {
+          name: contactName,
+          phone: contactPhone,
+          relationship: contactRel,
+        },
+        primaryDoctor: {
+          name: doctorName,
+          phone: doctorPhone,
+        },
+      }
+
+      const saveRes = saveEmergencySnapshot(payload)
+      if (!saveRes.success) {
+        showToast(saveRes.errors[0], 'error')
+        return false
+      }
+
+      showToast('Emergency snapshot updated', 'success')
+      if (onSaved) onSaved()
+      return true
+    },
+  })
+}
+
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
